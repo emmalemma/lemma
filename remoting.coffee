@@ -23,7 +23,7 @@ export fetchRef =(fetchArgs...)->
 		value: undefined
 		error: undefined
 		fetch: (fetchArgs...)->
-			doAsync -> try
+			shell.promise = doAsync -> try
 					res = await fetch fetchArgs...
 					if res.status < 200 or res.status > 299
 						throw new Error "Failure response: #{await res.json()}"
