@@ -4,31 +4,18 @@ import {reactive, watch, toRaw} from 'vue'
 import {doAsync} from './remoting'
 
 export class LocalDatabase
-	@open: (dbname)->
+	@open: (dbname, version, stores = [])->
 		new Promise (resolve, reject)->
-				request = window.indexedDB.open dbname, IDBVERSION
+				request = window.indexedDB.open dbname, version
 				request.onerror =-> reject request.error
 				request.onsuccess =-> resolve new LocalDatabase request.result
 				request.onupgradeneeded =->
 					db = request.result
-					try
-						db.createObjectStore 'transcriptions'
-					catch e
-						console.warn e
-					try
-						db.createObjectStore 'local-speakers'
-					catch e
-						console.warn e
-
-					try
-						db.createObjectStore 'localPhrases'
-					catch e
-						console.warn e
-
-					try
-						db.createObjectStore 'transcription-files'
-					catch e
-						console.warn e
+					for store in stores
+						try
+							db.createObjectStore store
+						catch e
+							console.warn e
 					# resolve new LocalDatabase db
 
 	constructor: (@database)->
@@ -75,6 +62,20 @@ export class LocalDatabase
 				request.onsuccess =-> resolve request.result
 				request.onerror =-> reject request.error
 
+	getAll: (store)->
+		new Promise (resolve, reject)=>
+				transaction = @database.transaction [store]
+				transaction.onerror =-> reject transaction.error
+
+				try
+					store = transaction.objectStore store
+				catch e
+					reject e
+
+				request = store.getAll()
+				request.onsuccess =-> resolve request.result
+				request.onerror =-> reject request.error
+
 	setObject: (store, key, object)->
 		new Promise (resolve, reject)=>
 				transaction = @database.transaction [store], 'readwrite'
@@ -98,7 +99,7 @@ export dbState = (db, store, key, def)->
 		doAsync ->
 			shell.state = 'loading'
 			try
-				database = await LocalDatabase.open db
+				database = await db
 				shell.value = await database.getObject store, key
 				shell.value ?= def
 				shell.state = 'loaded'
@@ -113,19 +114,20 @@ export dbState = (db, store, key, def)->
 		shell
 
 export dbStore = (db, store)->
-		state = reactive
-			state: 'pending'
-		shell.promise = doAsync ->
-			shell.state = 'loading'
-			try
-				database = await LocalDatabase.open db
-				shell.state = 'loaded'
-				shell.get =(key)-> database.getObject store, key
-				shell.keys =->database.getKeys store
-				shell.set =(key, value)-> database.setObject store, key, value
-				shell.delete =(key)-> database.deleteObject store, key
-			catch e
-				shell.error = e.message
-				shell.state = 'error'
-			shell
+	shell = reactive
+		state: 'pending'
+	shell.promise = doAsync ->
+		shell.state = 'loading'
+		try
+			database = await db
+			shell.state = 'loaded'
+			shell.get =(key)-> database.getObject store, key
+			shell.getAll =()-> database.getAll store
+			shell.keys =->database.getKeys store
+			shell.set =(key, value)-> database.setObject store, key, value
+			shell.delete =(key)-> database.deleteObject store, key
+		catch e
+			shell.error = e.message
+			shell.state = 'error'
 		shell
+	shell

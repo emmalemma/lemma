@@ -14,30 +14,33 @@ export themed =(themeId, definitions)->
 	for key, def of definitions
 		n += 1
 		localClass = ".#{key}-#{n}"
-		classNames[key] = localClass
-		styles = ""
-		mods = {}
-		def.call methods =
-			class: (name)-> classNames[key] += ".#{name}"
-			tag: (name)-> classNames[key] = name + classNames[key]
-			css: (text)->
-				styles += text
-			color: (s)->
-			layout: (n)->
-			padding:
-				text: ->
-					methods.css "padding: 1em;"
-			background:
-				focus: ->
-					methods.css "background-color: darkGray;"
-			mod: (mod, css)->
-				m = mods[mod] ?= {css: ""}
-				m.css += css
-		decl = "#{localClass} {
-			 #{styles}
-			}"
-		ruleIdx = sheet.insertRule decl
-		for mod, {css} of mods
-			sheet.insertRule rules = "#{localClass}#{mod} { #{css} }"
-			console.log 'mod rules', rules
+		builder = new StyleBuilder localClass
+		def.call builder
+		classNames[key] = builder.rootName
+		for selector, style of builder.getRules()
+			sheet.insertRule "#{selector} { #{style} }"
 	classNames
+
+class StyleBuilder
+	constructor: (@rootName)->
+		@rules = {}
+		@root = ""
+
+	getRules: ->
+		rules = {}
+		rules[@rootName] = @root
+		for selector, rule of @rules
+			rules[@rootname + selector] = rule
+		rules
+
+	class: (name)-> @rootName += ".#{name}"
+	tag: (name)-> @rootName = name + @rootName
+	css: (text)->@root += text
+	mod: (mod, css)->
+		@rules[mod] = css
+
+export DynamicTheme =->
+
+	new Proxy {},
+		get: (target, classKey)->
+			selector = ".#{classKey.replace /_/g, '-'}"

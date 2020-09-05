@@ -1,4 +1,4 @@
-import {canaryProxy, prohibitThis} from './errors'
+import {canaryProxy, prohibitThis, RegistrationError} from './errors'
 import {elements} from './elements'
 
 export registration = (regFn)->

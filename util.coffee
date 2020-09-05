@@ -36,7 +36,10 @@ export mutate =(obj, fn)->
     fn.call this, obj
     obj
 
-export delay =(delay, fn)->setTimeout fn, delay
+export delay =(delay, fn)->
+	throw new Error 'Wrong delay api' if fn
+	new Promise (res) ->
+		setTimeout res, delay
 
 export quoted =(s)->"\"#{s}\""
 
