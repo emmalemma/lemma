@@ -1,0 +1,4 @@
+#!/bin/sh
+
+coffee -w -c ./server &
+# rollup -w -c .config/rollup.config.mjs

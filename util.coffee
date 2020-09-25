@@ -8,13 +8,21 @@ export mount =(app, selector)->
 		throw error unless process.env.NODE_ENV is 'production'
 	app
 
-export mountListener =(target, event, cb, capture=false)->
-	target.addEventListener event, cb, capture
-	onUnmounted -> target.removeEventListener event, cb, capture
-
 export mountOn =(target, event, cb)->
 	handle = target.on event, cb
 	onUnmounted -> target.off handle
+
+export merge =(a, bs...)->
+	for b in bs
+		for k, v of b
+			a[k] = v
+	a
+
+export premerge =(a, bs...)->
+	for b in bs
+		for k, v of b
+			a[k] = v if a[k] is undefined
+	a
 
 export literal = do ->
 	Thing = (type)-> (fn)->
