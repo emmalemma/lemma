@@ -18,6 +18,19 @@ export merge =(a, bs...)->
 			a[k] = v
 	a
 
+
+export mergeClass =(a, bs...)->
+	for b in bs
+		for k, v of b
+			if k is 'class'
+				a.class ?= {}
+				a.class[k] = b.class[k] for k of b.class
+			else
+				a[k] = v
+	a
+
+
+
 export premerge =(a, bs...)->
 	for b in bs
 		for k, v of b

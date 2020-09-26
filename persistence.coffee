@@ -1,7 +1,7 @@
 import {reactive, watch, toRaw} from 'vue'
 import {LocalDatabase} from './database'
 
-import {fetcher} from './remoting'
+import {fetcher, doAsync} from './remoting'
 #
 #	target api:
 # 	object = remote id: x
@@ -13,6 +13,9 @@ import {fetcher} from './remoting'
 # 1. load on read
 # 2. save on write
 # 3. populate cursors
+
+RemotePromises = new WeakMap
+PersistentPromises = new WeakMap
 
 export remote = (state = {})->
 	shell = reactive
@@ -33,36 +36,43 @@ export remote = (state = {})->
 remote.connect = (url)->
 	remote.url = url
 
+remote.promise =(remoteObject)->
+	RemotePromises.get remoteObject
+
 remote.sync = (remoteObject)->
-	remoteObject.state = 'loading'
-	try
-		result = await fetcher.get "#{remote.url}/#{remoteObject.store}/#{remoteObject.id or ''}"
-	catch e
-		unless e.status is 404
-			throw e
-			e = null
+	RemotePromises.set remoteObject, doAsync ->
+		console.log 'remote object is syncing'
+		remoteObject.state = 'loading'
+		try
+			result = await fetcher.get "#{remote.url}/#{remoteObject.store}/#{remoteObject.id or ''}"
+		catch e
+			unless e.status is 404
+				throw e
+				e = null
 
-	if result and result.rev > remoteObject.rev
-		remoteObject.value = result.value
-		remoteObject.id = result.id
-		remoteObject.rev = result.rev
-		remoteObject.state = 'synced'
-
-	else if not result or remoteObject.rev > result.rev
-		if not result
-			remoteObject.rev = 0
-
-		remoteObject.state = 'saving'
-		result = await fetcher.post "#{remote.url}/#{remoteObject.store}/#{remoteObject.id}", body: toRaw remoteObject
-
-		remoteObject.id = result.id
-		remoteObject.rev = result.rev
-		if result.state is 'raced'
-			remoteObject.stale = remoteObject.value
+		if result and result.rev > remoteObject.rev
 			remoteObject.value = result.value
-		remoteObject.state = 'synced'
+			remoteObject.id = result.id
+			remoteObject.rev = result.rev
+			remoteObject.state = 'synced'
 
-	remoteObject
+		else if not result or remoteObject.rev > result.rev
+			console.log 'updating because', remoteObject.rev, '>', result.rev
+			if not result
+				remoteObject.rev = 0
+
+			remoteObject.state = 'saving'
+			result = await fetcher.post "#{remote.url}/#{remoteObject.store}/#{remoteObject.id}", body: toRaw remoteObject
+
+			remoteObject.id = result.id
+			remoteObject.rev = result.rev
+			if result.state is 'raced'
+				remoteObject.stale = remoteObject.value
+				remoteObject.value = result.value
+			remoteObject.state = 'synced'
+		console.log 'sync complete'
+
+		remoteObject
 
 export persist = (state = {})->
 	shell = reactive
@@ -84,20 +94,21 @@ persist.connect = (database, version, stores = [])->
 	persist.database = LocalDatabase.open database, version, stores
 
 persist.sync = (persistent)->
-	persistent.state = 'loading'
-	result = await (await persist.database).getObject persistent.store, persistent.id
+	PersistentPromises.set persistent, doAsync ->
+		persistent.state = 'loading'
+		result = await (await persist.database).getObject persistent.store, persistent.id
 
-	if result and result.rev > persistent.rev
-		persistent.value = result.value
-		persistent.id = result.id
-		persistent.rev = result.rev
-		persistent.state = 'synced'
+		if result and result.rev > persistent.rev
+			persistent.value = result.value
+			persistent.id = result.id
+			persistent.rev = result.rev
+			persistent.state = 'synced'
 
-	else if not result or persistent.rev > result.rev
-		persistent.state = 'saving'
-		if not result and persistent.rev < 0
-			persistent.rev = 0
-		await (await persist.database).setObject persistent.store, persistent.id, toRaw persistent
-		persistent.state = 'synced'
+		else if not result or persistent.rev > result.rev
+			persistent.state = 'saving'
+			if not result and persistent.rev < 0
+				persistent.rev = 0
+			await (await persist.database).setObject persistent.store, persistent.id, toRaw persistent
+			persistent.state = 'synced'
 
-	persistent
+		persistent

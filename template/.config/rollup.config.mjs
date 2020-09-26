@@ -2,12 +2,23 @@
 import coffeescript from 'rollup-plugin-coffee-script';
 import nodeResolve from 'rollup-plugin-node-resolve';
 import injectProcessEnv from 'rollup-plugin-inject-process-env';
+import commonJs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
 import babel from '@rollup/plugin-babel';
+import json from '@rollup/plugin-json';
 import path from 'path';
+import polyfills from 'rollup-plugin-node-polyfills';
+import analyzer from 'rollup-plugin-analyzer';
+import html from '@rollup/plugin-html';
 
 export default {
   input: 'client/main.coffee',
   plugins: [
+      analyzer({hideDeps: true, summaryOnly: true}),
+      resolve({preferBuiltins: false}),
+      commonJs(),
+      json(),
+      polyfills(),
 	coffeescript(),
 	nodeResolve({ extensions: ['.js', '.coffee'] }),
 	// commonjs({
@@ -17,6 +28,7 @@ export default {
 	injectProcessEnv({
         env: {}}
     ),
+    html({title: 'Template App'}),
 ],
 	output: {
 		file: 'public/bundle.js',
