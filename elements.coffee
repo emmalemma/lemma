@@ -8,7 +8,6 @@ formatPath =(el_path, max_length = 5)->
 		el_path = [el_path[0], "...#{el_path.length - max_length} hidden...", ...el_path[-max_length+1..]]
 	el_path.map((p)=>"el(#{p})").join ' -> '
 
-
 export elements = (_el_render, child)->
 	_el_path = null
 	_el_stack = null
@@ -92,9 +91,25 @@ export elements = (_el_render, child)->
 
 		_el_return_sentinel
 
+	el = null
+	el_chainer = ->
+		path = []
+		proxy = new Proxy (->),
+			get: (target, prop)->
+				path.push prop
+				proxy
+			apply: (target, it, args)->
+				args.unshift path.join('.')
+				el.apply it, args
+
+	el_generator = new Proxy {},
+		get: (target, prop)->
+			if prop is '$'
+				el_generator
+			else el_chainer()[prop]
 
 	_el_wrapper = ->
-		el = _el_outer.bind this
+		elements.activeEl = el = _el_outer.bind this
 		createElement = h
 		_el_stack = []
 		_el_path = []
@@ -102,7 +117,7 @@ export elements = (_el_render, child)->
 
 
 		try
-			_el_render.call(this, el, child)
+			_el_render.call(this, el, child, el_generator)
 		catch e
 			processError e
 			throw e

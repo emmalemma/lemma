@@ -11,3 +11,5 @@ export * from './remoting'
 export * from './themed'
 export * from './timer'
 export * from './util'
+
+export * from './components'

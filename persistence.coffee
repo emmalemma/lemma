@@ -14,101 +14,122 @@ import {fetcher, doAsync} from './remoting'
 # 2. save on write
 # 3. populate cursors
 
-RemotePromises = new WeakMap
-PersistentPromises = new WeakMap
+PersistentRecords = new WeakMap
 
-export remote = (state = {})->
+remote = local = persist = null
+
+export persist = (state = {})->
 	shell = reactive
 		value: state.value
+
+	record = reactive
 		id: state.id
 		rev: state.rev or -1
 
 		store: state.store or 'uncategorized'
 		state: 'pending'
-		owner: 'remote'
-	remote.sync shell
-	watch (->shell.value), (->
-		if shell.state is 'synced'
-			shell.rev += 1
-			remote.sync shell), deep: true
+		owner: state.owner
+		watch: ->
+			record._watchStop ?= watch (->shell.value), (->
+				if record.state is 'synced'
+					record.rev += 1
+					persist.sync shell), deep: true
+		unwatch: ->
+			record._watchStop()
+			record._watchStop = null
+
+	if record.owner is 'remote'
+		record.retrieve =-> fetcher.get "#{remote.url}/#{record.store}/#{record.id or ''}"
+		record.push =-> fetcher.post "#{remote.url}/#{record.store}/#{record.id}", body: {id: record.id, rev: record.rev, value: toRaw shell.value}
+	else if record.owner is 'local'
+		record.retrieve =->
+			out = await (await local.database).getObject record.store, record.id
+			out
+		record.push =->
+			await (await local.database).setObject record.store, record.id, id: record.id, rev: record.rev, value: toRaw shell.value
+			{value: shell.value, id: record.id, rev: record.rev}
+
+	record.watch()
+	PersistentRecords.set shell, record
+
+	unless state.sync is no
+		persist.sync shell
+
 	shell
 
-remote.connect = (url)->
-	remote.url = url
+persist.record =(shell)->
+	PersistentRecords.get shell
 
-remote.promise =(remoteObject)->
-	RemotePromises.get remoteObject
+persist.promise =(shell)->
+	persist.record(shell).promise
 
-remote.sync = (remoteObject)->
-	RemotePromises.set remoteObject, doAsync ->
-		console.log 'remote object is syncing'
-		remoteObject.state = 'loading'
+persist.all = ({store, owner})->
+	shell = reactive []
+	PersistentRecords[shell] = record =
+		store: store
+		owner: owner
+	record.promise = doAsync ->
+		allResults = await if record.owner is 'remote'
+			Object.values await fetcher.get "#{remote.url}/#{record.store}"
+		else if record.owner is 'local'
+			(await local.database).getAll record.store
+
+		for result in allResults
+			result.sync = no
+			result.owner = record.owner
+			shell.push persist result
+
+	shell
+
+persist.sync = (shell)->
+	record = persist.record(shell)
+	record.promise = doAsync ->
+		record.state = 'loading'
 		try
-			result = await fetcher.get "#{remote.url}/#{remoteObject.store}/#{remoteObject.id or ''}"
+			result = await record.retrieve()
 		catch e
 			unless e.status is 404
 				throw e
 				e = null
 
-		if result and result.rev > remoteObject.rev
-			remoteObject.value = result.value
-			remoteObject.id = result.id
-			remoteObject.rev = result.rev
-			remoteObject.state = 'synced'
+		if result and result.rev > record.rev
+			record.unwatch()
+			shell.value = result.value
+			record.watch()
 
-		else if not result or remoteObject.rev > result.rev
-			console.log 'updating because', remoteObject.rev, '>', result.rev
+			record.id = result.id
+			record.rev = result.rev
+			record.state = 'synced'
+
+		else if not result or record.rev > result.rev
 			if not result
-				remoteObject.rev = 0
+				record.rev = 0
 
-			remoteObject.state = 'saving'
-			result = await fetcher.post "#{remote.url}/#{remoteObject.store}/#{remoteObject.id}", body: toRaw remoteObject
+			record.state = 'saving'
+			result = await record.push()
 
-			remoteObject.id = result.id
-			remoteObject.rev = result.rev
+			record.id = result.id
+			record.rev = result.rev
 			if result.state is 'raced'
-				remoteObject.stale = remoteObject.value
-				remoteObject.value = result.value
-			remoteObject.state = 'synced'
-		console.log 'sync complete'
+				record.stale = shell.value
+				record.unwatch()
+				shell.value = result.value
+				record.watch()
+			record.state = 'synced'
 
-		remoteObject
+		shell
 
-export persist = (state = {})->
-	shell = reactive
-		value: state.value
-		id: state.id
-		rev: state.rev or -1
 
-		store: state.store or 'global'
-		state: 'pending'
-		owner: 'local'
-	persist.sync shell
-	watch (->shell.value), (->
-		if shell.state is 'synced'
-			shell.rev += 1
-			persist.sync shell), deep: true
-	shell
+export remote = (record)->
+	record.owner = 'remote'
+	persist record
 
-persist.connect = (database, version, stores = [])->
-	persist.database = LocalDatabase.open database, version, stores
+remote.connect = (url)->
+	remote.url = url
 
-persist.sync = (persistent)->
-	PersistentPromises.set persistent, doAsync ->
-		persistent.state = 'loading'
-		result = await (await persist.database).getObject persistent.store, persistent.id
+export local = (record)->
+	record.owner = 'local'
+	persist record
 
-		if result and result.rev > persistent.rev
-			persistent.value = result.value
-			persistent.id = result.id
-			persistent.rev = result.rev
-			persistent.state = 'synced'
-
-		else if not result or persistent.rev > result.rev
-			persistent.state = 'saving'
-			if not result and persistent.rev < 0
-				persistent.rev = 0
-			await (await persist.database).setObject persistent.store, persistent.id, toRaw persistent
-			persistent.state = 'synced'
-
-		persistent
+local.connect = (database, version, stores = [])->
+	local.database = LocalDatabase.open database, version, stores

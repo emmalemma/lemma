@@ -1,6 +1,5 @@
 // rollup.config.js
 import coffeescript from 'rollup-plugin-coffee-script';
-import nodeResolve from 'rollup-plugin-node-resolve';
 import injectProcessEnv from 'rollup-plugin-inject-process-env';
 import commonJs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
@@ -15,12 +14,12 @@ export default {
   input: 'client/main.coffee',
   plugins: [
       analyzer({hideDeps: true, summaryOnly: true}),
-      resolve({preferBuiltins: false}),
+      resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
       json(),
       polyfills(),
 	coffeescript(),
-	nodeResolve({ extensions: ['.js', '.coffee'] }),
+	// nodeResolve({ extensions: ['.js', '.coffee'] }),
 	// commonjs({
 	//   extensions: ['.js', '.coffee']
   // }),
