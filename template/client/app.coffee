@@ -36,7 +36,7 @@ export App = ({})->
 
 
 	onMounted ->
-		testᴿ.value.appendChild component comp
+		component(comp).attach testᴿ.value
 
 	(el$, child, {$, el, il, input, label, h1, button, svg, textarea})->
 		# comp {el, il, button}

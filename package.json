@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@babel/runtime": "^7.11.2",
-    "markdown-it": "^11.0.1"
+    "markdown-it": "^11.0.1",
+    "snarkdown": "^2.0.0"
   }
 }

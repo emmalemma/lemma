@@ -1,75 +1,81 @@
-import {reactive, ref, nextTick, watch} from 'vue'
+import {reactive, ref, effect} from '@vue/reactivity'
 
 import {elements} from './elements'
 
-import MarkdownIt from 'markdown-it'
-# console.log 'imported markdown:', MarkdownIt
-markdown = new MarkdownIt html: true
+import snarkdown from 'snarkdown'
 
 EditOptions = reactive {}
 
 
-renderer = (x)->markdown.render x
+renderer = (md) =>
+	parts = md.split(/(?:\r?\n){2,}/)
+	return snarkdown(parts[0]) if parts.length is 1
+	parts.map (l)->
+		if [' ', '\t', '#', '-', '*'].some((ch)-> l.startsWith(ch))
+			snarkdown(l)
+		else "<p>#{snarkdown(l)}</p>"
+	.join('\n\n')
 
 export $cms = ({key, inline}, initial, options)->
-	if typeof initial is 'object'
-		options = initial
-		initial = null
-	initial ?= "[ cms: #{key} ]"
-	options ?= {}
-	entry = $cms.ref.value.strings[key] ?= {md: initial, html: renderer(initial)}
-	editOptions = EditOptions[key] ?= {}
-	template =(html)->
-		for k, v of options.template or {}
-			html = html.replace ///\#\{\s*#{k}\s*\}///g, v.toString()
-		html
-	options[k] = v for k, v of _=
-		innerHTML: template entry.html
-		'data-cms-key': key
-		key: "cms-#{key}"
-	if $cms.settings.highlight
-		options.href = ''
-		delete options.onClick
-		unless editOptions.editable
-			options.onClickCapture = (e)->
-				e.preventDefault()
-				e.stopPropagation()
-				editOptions.editable = true
-				editOptions.takeFocus = true
-		else
-			options.onClickCapture = (e)->
-				e.stopPropagation()
+	->
+		if typeof initial is 'object'
+			options = initial
+			initial = null
+		initial ?= "&lsqb; cms: #{key} &rsqb;"
+		options ?= {}
+		entry = $cms.ref.value.strings[key] ?= {md: initial, html: renderer(initial)}
+		editOptions = EditOptions[key] ?= {}
+		template =(html)->
+			for k, v of options.template or {}
+				html = html.replace ///\#\{\s*#{k}\s*\}///g, v.toString()
+			html
+		options[k] = v for k, v of _=
+			innerHTML: template entry.html
+			'data-cms-key': key
+			key: "cms-#{key}"
+		if $cms.settings.highlight
+			options.href = ''
+			delete options.onClick
+			unless editOptions.editable
+				options.onClickCapture = (e)->
+					e.preventDefault()
+					e.stopPropagation()
+					editOptions.editable = true
+					editOptions.takeFocus = true
+			else
+				options.onClickCapture = (e)->
+					e.stopPropagation()
 
-	if editOptions.editable
-		if editOptions.takeFocus
-			options.ref = divᴿ = ref null
-			nextTick -> divᴿ.value.focus()
-			editOptions.takeFocus = false
-		options.contenteditable = true
+		if editOptions.editable
+			if editOptions.takeFocus
+				options.ref = divᴿ = ref null
+				nextTick -> divᴿ.value.focus()
+				editOptions.takeFocus = false
+			options.contenteditable = true
 
-		options.textContent = if options.template
-			"<!-- TEMPLATE VARIABLES AVAILABLE: #{JSON.stringify options.template} -->\n\n" + entry.md
-		else entry.md
-		delete options.innerHTML
-		options.onFocusout = ({target: {textContent: text}})->
-			entry.md = if options.template
-				text.replace /^<!-- TEMPLATE VARIABLES AVAILABLE: .+? -->\n\n/, ''
-			else text
-			entry.html = renderer entry.md
-			editOptions.editable = false
-		options.onKeydown = (event)->
-			return unless event.keyCode is 13
-			event.preventDefault()
-			document.execCommand 'insertHTML', false, '\r\n'
+			options.textContent = if options.template
+				"<!-- TEMPLATE VARIABLES AVAILABLE: #{JSON.stringify options.template} -->\n\n" + entry.md
+			else entry.md
+			delete options.innerHTML
+			options.onFocusout = ({target: {textContent: text}})->
+				entry.md = if options.template
+					text.replace /^<!-- TEMPLATE VARIABLES AVAILABLE: .+? -->\n\n/, ''
+				else text
+				entry.html = renderer entry.md
+				editOptions.editable = false
+			options.onKeydown = (event)->
+				return unless event.keyCode is 13
+				event.preventDefault()
+				document.execCommand 'insertHTML', false, '\r\n'
 
-	options
+		options
 
 $cms.enable = ({ref})->
 	$cms.ref = ref
 	ref.value ?= {strings: {}}
 
-	watch (->$cms.settings.highlight), (highlight)->
-		document.body.setAttribute 'data-cms-highlight', highlight
+	effect ->
+		document.body.setAttribute 'data-cms-highlight', $cms.settings.highlight
 
 $cms.inline = (options, initial)->
 	options.inline = true

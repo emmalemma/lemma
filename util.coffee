@@ -86,3 +86,8 @@ export clamp =(x, min, max)->
 	Math.max min, Math.min x, max
 
 export tokenize =(s)->s.trim().replace(/[^A-Za-z0-9]+/g, '-')
+
+
+SymbolRegistry = new WeakMap
+export symbolize =(object)->
+	SymbolRegistry.get(object) or SymbolRegistry.set(object, Symbol('symbolized')).get(object)

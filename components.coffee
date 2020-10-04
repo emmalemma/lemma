@@ -1,85 +1,149 @@
 import {effect, track, trigger, ref, reactive} from '@vue/reactivity'
-import {watchEffect} from 'vue'
-
-console.log 'vue track: ', effect
-
-export creactive = (input = {})->
-	new Proxy input,
-		get: (target, prop)->
-			if typeof target[prop] is 'object'
-				creactive target[prop]
-			else
-				target[prop]
-		set: (target, prop, value)->
-			target[prop] = value
-
-
 
 export component = (_inner_render)->
+	el_generator = el_chainer = null
 
 	parent = null
-	domCache = {}
+	domCache = []
+	cacheIdx = null
+	_el_sentinel = {}
+
+	isScheduled = no
+	activeEffect = null
+
+	track𝑓 = ({target, key, type})->
+
+	trigger𝑓 = ({target, key, type, effect})->
+
+	rerender𝑓 =->
+		isScheduled = no
+		cacheIdx = 0
+		_inner_render el_generator
+
+	schedule𝑓 = (effect)->
+		unless isScheduled
+			isScheduled = yes
+			queueMicrotask rerender𝑓
+
+		effect.cached = no
+		while (effect = effect.parentEffect)?.cached
+			effect.cached = no
 
 	el = (contents...)->
 		props = contents[0]
-		key = "#{props.tagName} class=#{props.class} key=#{props.key}"
-		cacheRecord = domCache[key] ?= {childCache: {}, invalidators: []}
 
-		present = cacheRecord.element ?= document.createElement props.tagName
-		cacheRecord.markToClear = false
+		element = parent.children[cacheIdx]
 
-		for invalidate in cacheRecord.invalidators
-			invalidate()
-		cacheRecord.invalidators = []
+		if not element or element.tagName isnt props.tagName.toUpperCase() or element.className isnt props.class or (element._key and element._key isnt props._key) or (element._args and not element._args.every((arg)->props._args.includes(arg)))
+			console.log 'not reusing a', element
+			newElement = document.createElement props.tagName
+			unless element
+				parent.appendChild newElement
+				newElement._invalidators = []
+			else
+				parent.insertBefore newElement, element
 
+			element = newElement
+			element._effects = {}
+		else
+			element._mark = false
 
-		_parent = parent
+		cacheIdx += 1
 
+		applyContent = null
+		applyEffect =(content, idx)->
+			try
+				_activeEffect = activeEffect
+				activeEffect = element._effects[idx] ?= effect (-> applyContent content),
+					lazy: true
+					onTrack: track𝑓
+					onTrigger: trigger𝑓
+					scheduler: schedule𝑓
+				do activeEffect
+				activeEffect.cached = true
+				activeEffect.parentEffect = _activeEffect
+				activeEffect.element = element
+				activeEffect = _activeEffect
+			catch e
+				console.error 'Error in apply:', e
+		applyContent =(content, idx)->
+			if content is _el_sentinel
+				return
+			else if typeof content is 'function'
+				if activeEffect.invalidators
+					for invalidate in activeEffect.invalidators
+						invalidate()
+				activeEffect.invalidators = []
 
+				_parent = parent
+				parent = element
 
-		for content in contents
-			if typeof content is 'function'
-				cacheRecord.invalidators.push watchEffect ->
-					for ck, cr of cacheRecord.childCache
-						cr.markToClear = true
-					parent = present
-					_cache = domCache
-					domCache = cacheRecord.childCache
-					do content
-					domCache = _cache
+				_cacheIdx = cacheIdx
+				cacheIdx = 0
 
-					for ck, cr of cacheRecord.childCache
-						if cr.markToClear and cr.attached
-							present.removeChild cr.element
-							cr.attached = false
+				for child in element.children
+					child._mark = true
+
+				result = content((props._args or [])...)
+				applyContent result
+
+				remove = []
+				for child in element.children
+					if child._mark
+						remove.push child
+				for child in remove
+					element.removeChild child
+
+				cacheIdx = _cacheIdx
+				parent = _parent
+
 			else if typeof content is 'string'
-				present.textContent = content
+				element.textContent = content
+
 			else if typeof content is 'object'
 				for k, v of content
 					if m = k.match /^on(.+)/
 						event = m[1].toLowerCase()
-						present.addEventListener event, v
-						cacheRecord.invalidators.push do (event, v)->-> present.removeEventListener event, v
+						element.addEventListener event, v
+						activeEffect.invalidators ?= []
+						activeEffect.invalidators.push do (event, v)->-> element.removeEventListener event, v
 					else
-						present.setAttribute k, v
+						continue if k in ['tagName']
+						k = 'className' if k is 'class'
+						element[k] = v
 
+		for content,idx in contents
+			unless typeof content is 'function'
+				applyContent content
+			else if element._effects[idx]?.cached
+				continue
+			else
+				applyEffect content, idx
 
-		unless cacheRecord.attached
-			_parent?.appendChild present
-			cacheRecord.attached = true
-
-		parent = _parent or present
-		present
+		_el_sentinel
 
 	el_chainer = ->
 		props = {}
 		proxy = new Proxy (->),
 			get: (target, prop)->
-				unless props.tagName
-					props.tagName = prop
-				else
-					props.class ?= ""
-					props.class += "#{prop} "
+				if typeof prop is 'string'
+					if prop is '$key'
+						return (key)->
+							props._key = key
+							proxy
+					if prop is '$for'
+						return (args...)->
+							props._args = args
+							proxy
+					unless props.tagName
+						props.tagName = prop
+					else
+						if props.class
+							props.class += " #{prop}"
+						else
+							props.class = "#{prop}"
+				else if typeof prop is 'symbol'
+					props._key = prop
 				proxy
 			apply: (target, it, args)->
 				unless typeof args[0] is 'object'
@@ -95,8 +159,9 @@ export component = (_inner_render)->
 				el_generator
 			else el_chainer()[prop]
 
-	watchEffect ->
-		console.log 'running _inner_render'
-		_inner_render el_generator
-	console.log 'returning root'
-	return parent
+	renderEffect = null
+	isScheduled = no
+
+	attach: (root)->
+		parent = root
+		rerender𝑓()

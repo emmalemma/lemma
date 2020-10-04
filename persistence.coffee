@@ -1,4 +1,5 @@
-import {reactive, watch, toRaw} from 'vue'
+import {reactive, effect, toRaw} from '@vue/reactivity'
+import {watch} from 'vue'
 import {LocalDatabase} from './database'
 
 import {fetcher, doAsync} from './remoting'

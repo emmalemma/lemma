@@ -13,7 +13,7 @@ import html from '@rollup/plugin-html';
 export default {
   input: 'client/main.coffee',
   plugins: [
-      analyzer({hideDeps: true, summaryOnly: true}),
+      analyzer({hideDeps: false, summaryOnly: false}),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
       json(),

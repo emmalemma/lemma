@@ -1,4 +1,4 @@
-import {watch} from 'vue'
+import {effect} from '@vue/reactivity'
 
 export DynamicTheme =->
 
@@ -36,7 +36,7 @@ themes.enable =({ref})->
 	ref.value ?= {}
 	styleElement ?= createStyleElement()
 
-	watch (->themes.ref.value), ->
+	effect ->
 		styleElement.textContent = themes.ref.value?.storedText or '/* empty */'
 
 	watchDocumentStyles (ruleString)->
