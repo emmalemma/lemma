@@ -11,6 +11,8 @@ Api.serveDataObject('themes', './data/themes');
 
 Api.serveDataObject('cms', './data/cms');
 
+Api.serveDataObject('pages', './data/pages');
+
 Api.serve('./public');
 
 (async function() {

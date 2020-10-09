@@ -1,5 +1,5 @@
-import {reactive, effect, toRaw} from '@vue/reactivity'
-import {watch} from 'vue'
+import {reactive, effect, toRaw, stop} from '@vue/reactivity'
+import {watch} from './util'
 import {LocalDatabase} from './database'
 
 import {fetcher, doAsync} from './remoting'
@@ -20,41 +20,45 @@ PersistentRecords = new WeakMap
 remote = local = persist = null
 
 export persist = (state = {})->
-	shell = reactive
-		value: state.value
+	shell = reactive state.value
 
 	record = reactive
 		id: state.id
-		rev: state.rev or -1
+		rev: state.rev ? -1
 
 		store: state.store or 'uncategorized'
 		state: 'pending'
 		owner: state.owner
+		value: shell
 		watch: ->
-			record._watchStop ?= watch (->shell.value), (->
+			console.log 'watching', shell
+			record._effect ?= watch (->shell), (->
+				console.log 'saving record', record
 				if record.state is 'synced'
 					record.rev += 1
 					persist.sync shell), deep: true
 		unwatch: ->
-			record._watchStop()
-			record._watchStop = null
+			stop record._effect
+			record._effect = null
 
 	if record.owner is 'remote'
 		record.retrieve =-> fetcher.get "#{remote.url}/#{record.store}/#{record.id or ''}"
-		record.push =-> fetcher.post "#{remote.url}/#{record.store}/#{record.id}", body: {id: record.id, rev: record.rev, value: toRaw shell.value}
+		record.push =-> fetcher.post "#{remote.url}/#{record.store}/#{record.id}", body: {id: record.id, rev: record.rev, value: toRaw shell}
 	else if record.owner is 'local'
 		record.retrieve =->
 			out = await (await local.database).getObject record.store, record.id
 			out
 		record.push =->
-			await (await local.database).setObject record.store, record.id, id: record.id, rev: record.rev, value: toRaw shell.value
-			{value: shell.value, id: record.id, rev: record.rev}
+			await (await local.database).setObject record.store, record.id, id: record.id, rev: record.rev, value: toRaw shell
+			{value: shell, id: record.id, rev: record.rev}
 
 	record.watch()
 	PersistentRecords.set shell, record
 
 	unless state.sync is no
 		persist.sync shell
+	else
+		record.state = 'synced'
 
 	shell
 
@@ -64,11 +68,32 @@ persist.record =(shell)->
 persist.promise =(shell)->
 	persist.record(shell).promise
 
-persist.all = ({store, owner})->
-	shell = reactive []
+persist.collection = ({store, owner})->
+	shell = reactive {}
+
 	PersistentRecords[shell] = record =
 		store: store
 		owner: owner
+
+	proxy = new Proxy (shell),
+		get: (target, prop)-> target[prop]
+		has: (target, key)->key in target
+		getOwnPropertyDescriptor: (target, key) -> Object.getOwnPropertyDescriptor target, key
+		set: (target, prop, value)->
+			persisted =
+				store: record.store
+				id: prop
+				rev: 0
+				value: value
+			if record.owner is 'local'
+				await (await local.database).setObject record.store, prop, {id: prop, rev: 0, value}
+				return target[prop] = local persisted
+		deleteProperty: (target, prop)->
+			await if record.owner is 'local'
+				(await local.database).deleteObject record.store, prop
+			delete target[prop]
+			prop
+
 	record.promise = doAsync ->
 		allResults = await if record.owner is 'remote'
 			Object.values await fetcher.get "#{remote.url}/#{record.store}"
@@ -78,9 +103,18 @@ persist.all = ({store, owner})->
 		for result in allResults
 			result.sync = no
 			result.owner = record.owner
-			shell.push persist result
+			result.store = record.store
+			console.log 'collection persisting', result
+			shell[result.id] = persist result
+	# watch.shallow (->shell), ->
+	# 	for
+	#
+	proxy
 
-	shell
+persist.destroy =(shell)->
+	record = persist.record shell
+	if record.owner is 'local'
+		(await local.database).deleteObject record.store, record.id
 
 persist.sync = (shell)->
 	record = persist.record(shell)
@@ -95,7 +129,7 @@ persist.sync = (shell)->
 
 		if result and result.rev > record.rev
 			record.unwatch()
-			shell.value = result.value
+			shell[k] = v for k, v of result.value
 			record.watch()
 
 			record.id = result.id
@@ -111,11 +145,6 @@ persist.sync = (shell)->
 
 			record.id = result.id
 			record.rev = result.rev
-			if result.state is 'raced'
-				record.stale = shell.value
-				record.unwatch()
-				shell.value = result.value
-				record.watch()
 			record.state = 'synced'
 
 		shell
@@ -128,9 +157,17 @@ export remote = (record)->
 remote.connect = (url)->
 	remote.url = url
 
+remote.cursor = (record)->
+	record.owner = 'remote'
+	persist.cursor record
+
 export local = (record)->
 	record.owner = 'local'
 	persist record
+
+local.collection = (record)->
+	record.owner = 'local'
+	persist.collection record
 
 local.connect = (database, version, stores = [])->
 	local.database = LocalDatabase.open database, version, stores

@@ -4,6 +4,7 @@ Api.router.prefix '/api/v1'
 Api.serveDataObject 'global', './data/global'
 Api.serveDataObject 'themes', './data/themes'
 Api.serveDataObject 'cms', './data/cms'
+Api.serveDataObject 'pages', './data/pages'
 Api.serve './public'
 
 do ->

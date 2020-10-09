@@ -1,29 +1,16 @@
 import {reactive, ref, effect} from '@vue/reactivity'
 
-import {elements} from './elements'
+import {component} from './components'
 
-import snarkdown from 'snarkdown'
+import {markdown} from './markdown'
 
 EditOptions = reactive {}
 
-
-renderer = (md) =>
-	parts = md.split(/(?:\r?\n){2,}/)
-	return snarkdown(parts[0]) if parts.length is 1
-	parts.map (l)->
-		if [' ', '\t', '#', '-', '*'].some((ch)-> l.startsWith(ch))
-			snarkdown(l)
-		else "<p>#{snarkdown(l)}</p>"
-	.join('\n\n')
-
-export $cms = ({key, inline}, initial, options)->
+export $cms = ({key, inline}, initial)->
 	->
-		if typeof initial is 'object'
-			options = initial
-			initial = null
 		initial ?= "&lsqb; cms: #{key} &rsqb;"
-		options ?= {}
-		entry = $cms.ref.value.strings[key] ?= {md: initial, html: renderer(initial)}
+		options = {}
+		entry = $cms.ref.value.strings[key] ?= {md: initial, html: markdown(initial)}
 		editOptions = EditOptions[key] ?= {}
 		template =(html)->
 			for k, v of options.template or {}
@@ -34,6 +21,7 @@ export $cms = ({key, inline}, initial, options)->
 			'data-cms-key': key
 			key: "cms-#{key}"
 		if $cms.settings.highlight
+			console.log 'cms settings'
 			options.href = ''
 			delete options.onClick
 			unless editOptions.editable
@@ -46,12 +34,12 @@ export $cms = ({key, inline}, initial, options)->
 				options.onClickCapture = (e)->
 					e.stopPropagation()
 
-		if editOptions.editable
+		if $cms.settings.highlight and editOptions.editable
 			if editOptions.takeFocus
-				options.ref = divᴿ = ref null
-				nextTick -> divᴿ.value.focus()
+				# options.ref = divᴿ = ref null
+				# nextTick -> divᴿ.value.focus()
 				editOptions.takeFocus = false
-			options.contenteditable = true
+			options.contentEditable = true
 
 			options.textContent = if options.template
 				"<!-- TEMPLATE VARIABLES AVAILABLE: #{JSON.stringify options.template} -->\n\n" + entry.md
@@ -61,7 +49,7 @@ export $cms = ({key, inline}, initial, options)->
 				entry.md = if options.template
 					text.replace /^<!-- TEMPLATE VARIABLES AVAILABLE: .+? -->\n\n/, ''
 				else text
-				entry.html = renderer entry.md
+				entry.html = markdown entry.md
 				editOptions.editable = false
 			options.onKeydown = (event)->
 				return unless event.keyCode is 13
@@ -84,6 +72,19 @@ $cms.inline = (options, initial)->
 
 $cms.settings = reactive
 	highlight: false
+
+$cms.display =->
+	controller = component ({el, input, label, il})->
+		el.cmsCenter ->
+			el.actions.cms ->
+				label ->
+					input type: 'checkbox', checked: cms().settings.highlight, onChange: ({target:{checked}})->
+						cms().settings.highlight = checked
+					il 'Edit CMS'
+
+	root = document.createElement 'root'
+	document.body.appendChild root
+	controller.attach root
 
 cms_chainer =->
 	path = []

@@ -1,4 +1,5 @@
-import {effect} from '@vue/reactivity'
+import {effect, stop} from '@vue/reactivity'
+import {watch} from './util'
 
 export DynamicTheme =->
 
@@ -26,7 +27,6 @@ watchDocumentStyles =(cb)->
 		ruleTexts.sort()
 		canonicalRuleString = ruleTexts.join '\n'
 		if storedText and storedText isnt canonicalRuleString
-			console.log ruleTexts
 			cb canonicalRuleString
 		storedText = canonicalRuleString
 	setInterval doWatch, 250
@@ -36,9 +36,9 @@ themes.enable =({ref})->
 	ref.value ?= {}
 	styleElement ?= createStyleElement()
 
-	effect ->
+	watchEffect = watch (->themes.ref.value), ->
 		styleElement.textContent = themes.ref.value?.storedText or '/* empty */'
+		stop watchEffect
 
 	watchDocumentStyles (ruleString)->
-		console.log 'setting ref', ref
 		ref.value.storedText = ruleString

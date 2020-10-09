@@ -100,6 +100,7 @@ export elements = (_el_render, child)->
 				proxy
 			apply: (target, it, args)->
 				args.unshift path.join('.')
+				path = [path[0]]
 				el.apply it, args
 
 	el_generator = new Proxy {},

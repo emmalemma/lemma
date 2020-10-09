@@ -34,8 +34,7 @@ export component = (_inner_render)->
 
 		element = parent.children[cacheIdx]
 
-		if not element or element.tagName isnt props.tagName.toUpperCase() or element.className isnt props.class or (element._key and element._key isnt props._key) or (element._args and not element._args.every((arg)->props._args.includes(arg)))
-			console.log 'not reusing a', element
+		if not element or element.tagName isnt props.tagName.toUpperCase() or (element.className and element.className isnt props.class) or (element._key and element._key isnt props._key) or (element._args and not element._args.every((arg)->props._args.includes(arg)))
 			newElement = document.createElement props.tagName
 			unless element
 				parent.appendChild newElement
@@ -63,6 +62,7 @@ export component = (_inner_render)->
 				activeEffect.cached = true
 				activeEffect.parentEffect = _activeEffect
 				activeEffect.element = element
+				activeEffect.content = content
 				activeEffect = _activeEffect
 			catch e
 				console.error 'Error in apply:', e
@@ -71,6 +71,7 @@ export component = (_inner_render)->
 				return
 			else if typeof content is 'function'
 				if activeEffect.invalidators
+					console.log 'invalidating', activeEffect.invalidators
 					for invalidate in activeEffect.invalidators
 						invalidate()
 				activeEffect.invalidators = []
@@ -85,10 +86,13 @@ export component = (_inner_render)->
 					child._mark = true
 
 				result = content((props._args or [])...)
+				if typeof result is 'string'
+					console.log 'effect setting text value', result
 				applyContent result
 
 				remove = []
 				for child in element.children
+					console.log 'considering removing', child
 					if child._mark
 						remove.push child
 				for child in remove
@@ -98,15 +102,21 @@ export component = (_inner_render)->
 				parent = _parent
 
 			else if typeof content is 'string'
+				# do ->
+				# 	_content = element.textContent
+				# 	activeEffect.invalidators.push ->
+				# 		element.textContent = _content
 				element.textContent = content
 
 			else if typeof content is 'object'
+				# console.log 'applying content object', content
 				for k, v of content
-					if m = k.match /^on(.+)/
+					if m = k.match /^on(.+?)(capture|)$/i
 						event = m[1].toLowerCase()
-						element.addEventListener event, v
+						capturing = m[2].toLowerCase() is 'capture'
+						element.addEventListener event, v, capturing
 						activeEffect.invalidators ?= []
-						activeEffect.invalidators.push do (event, v)->-> element.removeEventListener event, v
+						activeEffect.invalidators.push do (event, v)->-> element.removeEventListener event, v, capturing
 					else
 						continue if k in ['tagName']
 						k = 'className' if k is 'class'

@@ -14,3 +14,4 @@ export * from './timer'
 export * from './util'
 
 export * from './components'
+export * from './markdown'

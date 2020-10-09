@@ -1,4 +1,4 @@
-import {local, remote, persist, themes, cms, component, ref, reactive, symbolize, toRaw} from 'ur'
+import {local, remote, persist, themes, cms, component, ref, reactive, symbolize, toRaw, elements, mount, markdown} from 'ur'
 
 # import {App} from './app'
 # import {Music} from './music'
@@ -18,62 +18,49 @@ do ->
 	document.body.innerHTML = "Loading..."
 	await persist.promise themes.ref
 	await persist.promise cms().ref
+	document.body.innerHTML = ''
+	cms().display()
 	# mount Root, 'body'
 
-	todos = reactive []
-	newTodo = ref ''
+	pages = remote store: 'global', id: 'pages', value: {pages: []}
 
-	add𝑓 =->
-		console.log 'adding', newTodo.value
-		todos.push task: newTodo.value
-		newTodo.value = ''
+	allPages = remote.cursor store: 'pages'
 
-	remove𝑓 = (todo)->
-		idx = todos.indexOf todo
-		todos.splice idx, 1
+	newPage = ref ''
 
-	moveUp𝑓 = (todo)->
-		idx = todos.indexOf todo
-		todos.splice idx, 1
-		todos.splice idx-1, 0, todo
+	randomPage = ref null
 
-	addMany𝑓 =->
-		for i in [0..100]
-			newTodo.value = i.toString()
-			add𝑓()
+	chooseRandom𝑓 =->
+		randomPage.value = pages.value.pages[Math.floor Math.random() * pages.value.pages.length]
+	persist.promise(pages).then chooseRandom𝑓
 
-	rootComponent = component ({el, il, input, button})->
-		el.todo ->
-			button.addMany cms.todo.actions.addMany(), onClick: addMany𝑓
-			el.newtodo ->
-				input.task ->value: newTodo.value, onInput: ({target: {value}})-> newTodo.value = value
-				button.add cms.todo.actions.add(), onClick: add𝑓
-				el.preview ->
-					il -> newTodo.value
-			el.todos ->
-				for todo,idx in todos
-					el.todo.$for(todo) (todo)->
-						il.task -> todo.task
-						il.actions ->
-							button.remove cms.todo.actions.remove(), onClick: ->remove𝑓(todo)
-							button.moveUp cms.todo.actions.moveup(), onClick: ->moveUp𝑓(todo)
+	persist.promise(allPages).then ->
+		await persist.promise(pages)
+		if allPages.length is 0
+			for page in pages.value.pages
+				allPages.push page
+	rootComponent = component ({el, label, il, input, button, textarea})->
+		el.papercut ->
+			el.header cms.papercut.header()
+			el.pages ->
+				el.page.random -> innerHTML: markdown randomPage.value?.text or ''
+				button 'Randomize', onclick: chooseRandom𝑓
+				el.page.next ->
+					il cms.papercut.nextPage()
 
-	rootComponent.attach document.body
-	#
-	# populate =->
-	# 	for i in [0..24000]
-	# 		el = document.createElement 'el'
-	# 		el.textContent = "test #{i}"
-	# 		document.body.appendChild el
-	#
-	# notify =->
-	# 	el = document.createElement 'el'
-	# 	el.textContent = 'testing now'
-	# 	document.body.appendChild el
-	# 	setTimeout populate, 100
-	#
-	# el = document.createElement 'el'
-	# el.textContent = "testing in 3..."
-	# document.body.appendChild el
-	#
-	# setTimeout notify, 3000
+			el.newPage ->
+				textarea oninput: (({target: {value}})->newPage.value = value), ->value: newPage.value
+				button 'Save Page', onclick: ->
+					page =
+						text: newPage.value
+					newPage.value = ''
+					console.log 'saving the page', page
+					pages.value.pages.push page
+					console.log pages.value
+
+			el.allPages ->
+				JSON.stringify allPages
+
+	root = document.createElement 'root'
+	document.body.appendChild root
+	rootComponent.attach root
