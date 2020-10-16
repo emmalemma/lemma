@@ -175,3 +175,9 @@ export component = (_inner_render)->
 	attach: (root)->
 		parent = root
 		rerender𝑓()
+
+
+bind = (object)->
+	new Proxy {}, 
+		get: (target, prop)->
+			value: (->target[prop]), onInput: ({target: {value}})->target[prop] = value

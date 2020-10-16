@@ -102,7 +102,7 @@ traverse =(value)->
 			for own k, v of value
 				traverse v
 
-export watch = (watcher, cb)->
+export watchUr = (watcher, cb)->
 	doEffect = effect (->traverse watcher()), scheduler: (->cb(); doEffect())
 
 export guid = ->

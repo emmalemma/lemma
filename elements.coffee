@@ -49,6 +49,11 @@ export elements = (_el_render, child)->
 			text = content
 			content = ->
 
+		if not props?
+			props = content
+			text = '[null]'
+			content = ->
+
 		if typeof key is 'string'
 			_el_path.push key
 		_el_stack.push _el_context = []

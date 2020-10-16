@@ -1,5 +1,5 @@
-import {reactive, effect, toRaw, stop} from '@vue/reactivity'
-import {watch} from './util'
+import {reactive, toRaw, watch} from 'vue'
+# import {watchUr} from './util'
 import {LocalDatabase} from './database'
 
 import {fetcher, doAsync} from './remoting'
@@ -19,6 +19,10 @@ PersistentRecords = new WeakMap
 
 remote = local = persist = null
 
+watchUr = (obs, sched)->
+	watch obs, sched, deep: true
+stop = (f)->f?()
+
 export persist = (state = {})->
 	shell = reactive state.value
 
@@ -31,9 +35,7 @@ export persist = (state = {})->
 		owner: state.owner
 		value: shell
 		watch: ->
-			console.log 'watching', shell
-			record._effect ?= watch (->shell), (->
-				console.log 'saving record', record
+			record._effect ?= watchUr (->shell), (->
 				if record.state is 'synced'
 					record.rev += 1
 					persist.sync shell), deep: true
@@ -71,7 +73,7 @@ persist.promise =(shell)->
 persist.collection = ({store, owner})->
 	shell = reactive {}
 
-	PersistentRecords[shell] = record =
+	PersistentRecords.set shell, record =
 		store: store
 		owner: owner
 
@@ -104,11 +106,11 @@ persist.collection = ({store, owner})->
 			result.sync = no
 			result.owner = record.owner
 			result.store = record.store
-			console.log 'collection persisting', result
 			shell[result.id] = persist result
 	# watch.shallow (->shell), ->
 	# 	for
 	#
+	PersistentRecords.set proxy, record
 	proxy
 
 persist.destroy =(shell)->
