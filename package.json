@@ -11,12 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@vue/reactivity": "^3.0.0",
-    "vue": "^3.0.0-rc.11"
+    "@vue/reactivity": "^3.0.0"
   },
   "devDependencies": {
     "@babel/runtime": "^7.11.2",
-    "markdown-it": "^11.0.1",
     "snarkdown": "^2.0.0"
   }
 }

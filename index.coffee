@@ -1,11 +1,8 @@
 
-# export {watch, onUnmounted} from 'vue'
-# export * from '@vue/reactivity'
-export * from 'vue'
+export * from '@vue/reactivity'
 
 export * from './cms'
 export * from './database'
-export * from './elements'
 export * from './events'
 export * from './persistence'
 export * from './registration'

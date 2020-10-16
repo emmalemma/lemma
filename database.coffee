@@ -1,6 +1,7 @@
 IDBVERSION = 7
 
-import {reactive, watch, toRaw} from 'vue'
+import {reactive, toRaw} from '@vue/reactivity'
+import {watch} from './util'
 import {doAsync} from './remoting'
 
 export class LocalDatabase

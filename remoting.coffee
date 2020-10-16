@@ -1,4 +1,4 @@
-import {reactive} from 'vue'
+import {reactive} from '@vue/reactivity'
 import {NamedError} from './errors'
 
 export doAsync =(fn)->fn()

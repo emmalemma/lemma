@@ -1,4 +1,4 @@
-import {ref, local, remote, delay, cms, reactive, persist, toRaw, watch, onMounted, component} from 'ur'
+import {ref, local, remote, delay, cms, reactive, persist, toRaw, watch, component} from 'ur'
 
 export App = ({})->
 	allThemes = persist.all store: 'themes', owner: 'remote'
@@ -7,13 +7,11 @@ export App = ({})->
 	watch (->allThemes), (->
 		console.log 'all themes:', allThemes
 		activeThemeᴿ.value = allThemes[0]
-		), deep: true
+		)
 
 	testᴿ = ref null
 	testValueᴿ = ref 3
 	multᴿ = ref 1
-	# onMounted ->
-		# testᴿ.value.appendChild component
 
 	comp = ({el, il, button})->
 			el.parent ->

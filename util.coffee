@@ -1,17 +1,4 @@
-import {onUnmounted, createApp} from 'vue'
 import {effect} from '@vue/reactivity'
-
-export mount =(app, selector)->
-	app = createApp app
-	app.mount selector
-	app.config.errorHandler = (error)->
-		console.error 'Internal:', error
-		throw error unless process.env.NODE_ENV is 'production'
-	app
-
-export mountOn =(target, event, cb)->
-	handle = target.on event, cb
-	onUnmounted -> target.off handle
 
 export merge =(a, bs...)->
 	for b in bs
