@@ -1,5 +1,5 @@
 import {canaryProxy, prohibitThis, RegistrationError} from './errors'
-import {elements} from './elements'
+# import {elements} from './elements'
 
 export registration = (regFn)->
     Registry = {}

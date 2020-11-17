@@ -21,7 +21,7 @@ remote = local = persist = null
 
 
 export persist = (state = {})->
-	shell = reactive state.value
+	shell = reactive state.value or {}
 
 	record = reactive
 		id: state.id
@@ -52,6 +52,7 @@ export persist = (state = {})->
 			{value: shell, id: record.id, rev: record.rev}
 
 	record.watch()
+
 	PersistentRecords.set shell, record
 
 	unless state.sync is no
@@ -70,7 +71,7 @@ persist.promise =(shell)->
 persist.collection = ({store, owner})->
 	shell = reactive {}
 
-	PersistentRecords.set shell, record =
+	record =
 		store: store
 		owner: owner
 
@@ -79,6 +80,7 @@ persist.collection = ({store, owner})->
 		has: (target, key)->key in target
 		getOwnPropertyDescriptor: (target, key) -> Object.getOwnPropertyDescriptor target, key
 		set: (target, prop, value)->
+			debugger
 			persisted =
 				store: record.store
 				id: prop
@@ -87,6 +89,9 @@ persist.collection = ({store, owner})->
 			if record.owner is 'local'
 				await (await local.database).setObject record.store, prop, {id: prop, rev: 0, value}
 				return target[prop] = local persisted
+			else if record.owner is 'remote'
+				await fetcher.post "#{remote.url}/#{record.store}/#{prop}", body: {id: prop, rev: 0, value: toRaw(value)}
+				return target[prop] = remote persisted
 		deleteProperty: (target, prop)->
 			await if record.owner is 'local'
 				(await local.database).deleteObject record.store, prop
@@ -156,9 +161,9 @@ export remote = (record)->
 remote.connect = (url)->
 	remote.url = url
 
-remote.cursor = (record)->
+remote.collection = (record)->
 	record.owner = 'remote'
-	persist.cursor record
+	persist.collection record
 
 export local = (record)->
 	record.owner = 'local'

@@ -1,4 +1,4 @@
-import {local, remote, persist, themes, cms, component, ref, reactive, symbolize, toRaw, elements, mount, markdown} from 'ur'
+import {local, remote, persist, themes, cms, component, ref, reactive, symbolize, toRaw, guid, markdown, elementTree, elements, attach, context} from 'ur'
 
 # import {App} from './app'
 # import {Music} from './music'
@@ -14,31 +14,42 @@ cms().enable ref: remote store: 'cms', id: 'global'
 # 	register App, ->
 # 		register Music
 # 		state {}
+
+
 do ->
+	attach document.body, ->
+		{div, button} = elements
+
+		nᴿ = ref 0
+		div.root ->
+			button 'increment', onclick: ->
+				nᴿ.value += 1
+				console.log 'nᴿ', nᴿ.value
+			div.n -> "value is #{nᴿ.value}"
+			for i in [0..nᴿ.value]
+				console.log 'would nx', i
+				div.nx -> "#{i}"
+
+if false then do ->
 	document.body.innerHTML = "Loading..."
 	await persist.promise themes.ref
 	await persist.promise cms().ref
 	document.body.innerHTML = ''
+
 	cms().display()
 	# mount Root, 'body'
 
-	pages = remote store: 'global', id: 'pages', value: {pages: []}
-
-	allPages = remote.cursor store: 'pages'
+	allPages = remote.collection store: 'pages'
 
 	newPage = ref ''
 
 	randomPage = ref null
 
 	chooseRandom𝑓 =->
-		randomPage.value = pages.value.pages[Math.floor Math.random() * pages.value.pages.length]
-	persist.promise(pages).then chooseRandom𝑓
+		values = Object.values allPages
+		randomPage.value = values[Math.floor Math.random() * values.length]
+	persist.promise(allPages).then chooseRandom𝑓
 
-	persist.promise(allPages).then ->
-		await persist.promise(pages)
-		if allPages.length is 0
-			for page in pages.value.pages
-				allPages.push page
 	rootComponent = component ({el, label, il, input, button, textarea})->
 		el.papercut ->
 			el.header cms.papercut.header()
@@ -54,12 +65,7 @@ do ->
 					page =
 						text: newPage.value
 					newPage.value = ''
-					console.log 'saving the page', page
-					pages.value.pages.push page
-					console.log pages.value
-
-			el.allPages ->
-				JSON.stringify allPages
+					allPages[await guid()] = page
 
 	root = document.createElement 'root'
 	document.body.appendChild root

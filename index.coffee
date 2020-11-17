@@ -11,5 +11,6 @@ export * from './themed'
 export * from './timer'
 export * from './util'
 
+export * from './elements'
 export * from './components'
 export * from './markdown'

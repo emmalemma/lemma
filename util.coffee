@@ -89,8 +89,11 @@ traverse =(value)->
 			for own k, v of value
 				traverse v
 
-export watchUr = (watcher, cb)->
+export watch = (watcher, cb)->
 	doEffect = effect (->traverse watcher()), scheduler: (->cb(); doEffect())
+
+watch.shallow = (watcher, cb)->
+	doEffect = effect (->watcher()), scheduler: (->cb(); doEffect())
 
 export guid = ->
 	encoder = new TextEncoder()
