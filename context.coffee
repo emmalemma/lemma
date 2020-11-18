@@ -1,3 +1,4 @@
+import {effect} from '@vue/reactivity'
 
 parentElement = null
 
@@ -30,53 +31,127 @@ elementBuilder = (el)->
 				el_generator
 			else el_chainer(prop)
 
-rerender = (target)->
-	applyBody target, target.bodyFn
-
 checkRenders = (target)->
 	if target.needsRerender
-		rerender target
+		do target.effect
 	else if target.childNeedsRerender
-		checkRenders child for child in target
+		checkRenders child for child in target.children
 
-Context.doRerenders =->
-	checkRenders root
+# Context.doRerenders =->
+# 	checkRenders root
 
+rootElement = null
+scheduled = false
 schedule𝑓 = (effect)->
 	effect.element.needsRerender = true
-	for parent of effect
-		parent.element.childNeedsRerender = true
+	parentEffect = effect
+	while (parentEffect = parentEffect.parent) and not parentEffect.element.childNeedsRerender
+		console.log 'tracing effect tree', parentEffect, parentEffect.element, parentEffect.parent
+		parentEffect.element.childNeedsRerender = true
 
-	queueMicrotask ->
-		Context.doRerenders
+	unless scheduled
+		scheduled = true
+		# queueMicrotask preempts some DOM behaviors (e.g. checkboxes)
+		setTimeout (->
+			scheduled = false
+			checkRenders rootElement), 0
 
-effectCatcher = (effectFn)->
-	effect effectFn,
+activeEffect = null
+effectCatcher = (element, effectFn)->
+	_activeEffect = activeEffect
+	element.effect = activeEffect = effect effectFn,
 		scheduler: schedule𝑓
+		lazy: true
+	activeEffect.parent = _activeEffect
+	activeEffect.element = element
+	do activeEffect
+	activeEffect = _activeEffect
 
 cursor = null
 insertElement = null
+lastProperElement = null
 
-applyBody = (element, bodyFn)->
-	effectCatcher ->
+makeEffect = (element, bodyFn)->
+	element.bodyFn = bodyFn
+	effectCatcher element, ->
 		_parent = parentElement
 		parentElement = element
+		_cursor = cursor
 		cursor = element.firstElementChild
+		_insert = insertElement
 		insertElement = element.firstElementChild
+
+		_last = lastProperElement
+		lastProperElement = null
 		do bodyFn
+
+		lastElement = if lastProperElement
+			lastProperElement.nextElementSibling
+		else
+			element.firstElementChild
+
+		while lastElement
+			_last = lastElement.nextElementSibling
+			lastElement.parentElement.removeChild lastElement
+			lastElement = _last
+
+
+		lastProperElement = _last
+		cursor = _cursor
+		insertElement = _insert
 		parentElement = _parent
 
 applyProps = (element, props)->
-	props = effectCatcher props
+	for prop, value of props
+		if false and eventMatch = prop.match /^on(.+)$/
+			event = eventMatch[1]
+			element.addEventListener event, value
+		else
+			switch prop
+				when 'x' then null
+				when 'checked'
+					element[prop] = if value then true else false
+				else element[prop] = value
+
+matchKeyProps = (element, keyProps)->
+	return false unless element.tagName.toLowerCase() is keyProps.tagName.toLowerCase() and element.keyClass is keyProps.class
+	if keyProps._args
+		for arg, idx in keyProps._args
+			return false unless arg is element._args[idx]
+	true
 
 makeOrRetrieve = (keyProps)->
 	while cursor and not matchKeyProps cursor, keyProps
 		cursor = cursor.nextElementSibling
 
 	if cursor
+		return cursor
+
+	else
+		element = document.createElement keyProps.tagName
+		element.className = keyProps.class
+		element.keyClass = keyProps.class
+		element._args = keyProps._args
+		return element
 
 
-elements =  (keyProps, props, bodyfn)->
+
+elements =  (keyProps, args...)->
+	for arg in args
+		switch typeof arg
+			when 'function' then bodyFn = arg
+			when 'object' then props = arg
+			when 'string' then textContent = arg
+
+	unless props
+		props = {}
+
+	if textContent
+		props.textContent = textContent
+
+	if (_args = keyProps._args) and (_bodyFn = bodyFn)
+		bodyFn = -> _bodyFn _args...
+
 	element = makeOrRetrieve keyProps
 
 	if insertElement
@@ -87,41 +162,30 @@ elements =  (keyProps, props, bodyfn)->
 	else
 		parentElement.appendChild element
 
+	cursor = element.nextElementSibling
+
 	applyProps element, props
-	applyBody element, bodyfn
 
-watchStack = (target, renderFn)->
+	if bodyFn
+		if element.effect
+			checkRenders element
+		else
+			makeEffect element, bodyFn
 
-	effectCatcher ->
-		parentElement = target
-		renderFn elementBuilder(elements)
+	lastProperElement = element
 
-export Context = (contextFn)->
-	return ({inputs}, target)->
-		renderFn = contextFn inputs
+	return element
 
-		watchStack target, renderFn
+watchStack = (renderFn)->
 
+export context = (contextFn)->
+	return (target, inputs)->
+		renderFn = contextFn inputs or {}
+		# initialize state stack
+		els = elementBuilder(elements)
+		effectCatcher target, ->
+			rootElement = parentElement = target
+			renderFn els
 
-subComponent = Context ({x})->
-	({li})->
-		li x
-
-component = Context ({inputs})->
-	x = ref 1
-	y = ref 2
-	z = ref 3
-	# global.addEventListener()
-	# teardown -> global.removeEventListener()
-
-	({el, il})->
-		el.x x.value
-		el.y y.value
-		el.k wrap(->klass: 'ab'), ->
-		el.z z.value, ->
-		el.numbers ->
-			el.one '1'
-			el.two '2'
-		subComponent {x: x.value}
-
-component document.body, {inputs}
+context.attach = (ctx, element)->
+	ctx element
