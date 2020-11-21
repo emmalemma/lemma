@@ -1,7 +1,5 @@
 import {reactive, ref, effect} from '@vue/reactivity'
 
-import {component} from './components'
-
 import {markdown} from './markdown'
 
 EditOptions = reactive {}
