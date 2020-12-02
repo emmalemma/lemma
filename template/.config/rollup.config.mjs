@@ -5,7 +5,6 @@ import commonJs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import babel from '@rollup/plugin-babel';
 import json from '@rollup/plugin-json';
-import path from 'path';
 import polyfills from 'rollup-plugin-node-polyfills';
 import analyzer from 'rollup-plugin-analyzer';
 import html from '@rollup/plugin-html';
@@ -17,13 +16,23 @@ export default {
       analyzer({hideDeps: false, summaryOnly: false}),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
+      babel({
+        babelHelpers: 'bundled',
+        exclude: [/core-js/],
+        presets: [["@babel/env", {
+            "useBuiltIns": "entry",
+            "corejs": 3,
+            "modules": false,
+            targets: {esmodules: true},
+
+          }]]
+      }),
       json(),
       polyfills(),
 	// nodeResolve({ extensions: ['.js', '.coffee'] }),
 	// commonjs({
 	//   extensions: ['.js', '.coffee']
   // }),
-	babel({ babelHelpers: 'bundled', configFile: path.resolve(__dirname, 'babel.config.mjs') }),
 	injectProcessEnv({
         env: {}}
     ),

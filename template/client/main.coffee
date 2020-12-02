@@ -64,7 +64,6 @@ coords = [
 ]
 
 import midiParser from 'midi-parser-js'
-
 lanes = state music
 transpose = state steps: 0
 
