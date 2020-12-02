@@ -13,12 +13,12 @@ import html from '@rollup/plugin-html';
 export default {
   input: 'client/main.coffee',
   plugins: [
+      coffeescript(),
       analyzer({hideDeps: false, summaryOnly: false}),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
       json(),
       polyfills(),
-	coffeescript(),
 	// nodeResolve({ extensions: ['.js', '.coffee'] }),
 	// commonjs({
 	//   extensions: ['.js', '.coffee']

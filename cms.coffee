@@ -5,61 +5,58 @@ import {markdown} from './markdown'
 EditOptions = reactive {}
 
 export $cms = ({key, inline}, initial)->
-	->
-		initial ?= "&lsqb; cms: #{key} &rsqb;"
-		options = {}
-		entry = $cms.ref.value.strings[key] ?= {md: initial, html: markdown(initial)}
-		editOptions = EditOptions[key] ?= {}
-		template =(html)->
-			for k, v of options.template or {}
-				html = html.replace ///\#\{\s*#{k}\s*\}///g, v.toString()
-			html
-		options[k] = v for k, v of _=
-			innerHTML: template entry.html
-			'data-cms-key': key
-			key: "cms-#{key}"
-		if $cms.settings.highlight
-			console.log 'cms settings'
-			options.href = ''
-			delete options.onClick
-			unless editOptions.editable
-				options.onClickCapture = (e)->
-					e.preventDefault()
-					e.stopPropagation()
-					editOptions.editable = true
-					editOptions.takeFocus = true
-			else
-				options.onClickCapture = (e)->
-					e.stopPropagation()
+	initial ?= "&lsqb; cms: #{key} &rsqb;"
+	options = {}
+	entry = $cms.strings[key] ?= {md: initial, html: markdown(initial)}
+	editOptions = EditOptions[key] ?= {}
+	template =(html)->
+		for k, v of options.template or {}
+			html = html.replace ///\#\{\s*#{k}\s*\}///g, v.toString()
+		html
+	options[k] = v for k, v of _=
+		innerHTML: template entry.html
+		'data-cms-key': key
+		key: "cms-#{key}"
+	if $cms.settings.highlight
+		console.log 'cms settings'
+		options.href = ''
+		delete options.onClick
+		unless editOptions.editable
+			options.onClickCapture = (e)->
+				e.preventDefault()
+				e.stopPropagation()
+				editOptions.editable = true
+				editOptions.takeFocus = true
+		else
+			options.onClickCapture = (e)->
+				e.stopPropagation()
 
-		if $cms.settings.highlight and editOptions.editable
-			if editOptions.takeFocus
-				# options.ref = divᴿ = ref null
-				# nextTick -> divᴿ.value.focus()
-				editOptions.takeFocus = false
-			options.contentEditable = true
+	if $cms.settings.highlight and editOptions.editable
+		if editOptions.takeFocus
+			# options.ref = divᴿ = ref null
+			# nextTick -> divᴿ.value.focus()
+			editOptions.takeFocus = false
+		options.contentEditable = true
 
-			options.textContent = if options.template
-				"<!-- TEMPLATE VARIABLES AVAILABLE: #{JSON.stringify options.template} -->\n\n" + entry.md
-			else entry.md
-			delete options.innerHTML
-			options.onFocusout = ({target: {textContent: text}})->
-				entry.md = if options.template
-					text.replace /^<!-- TEMPLATE VARIABLES AVAILABLE: .+? -->\n\n/, ''
-				else text
-				entry.html = markdown entry.md
-				editOptions.editable = false
-			options.onKeydown = (event)->
-				return unless event.keyCode is 13
-				event.preventDefault()
-				document.execCommand 'insertHTML', false, '\r\n'
+		options.textContent = if options.template
+			"<!-- TEMPLATE VARIABLES AVAILABLE: #{JSON.stringify options.template} -->\n\n" + entry.md
+		else entry.md
+		delete options.innerHTML
+		options.onFocusout = ({target: {textContent: text}})->
+			entry.md = if options.template
+				text.replace /^<!-- TEMPLATE VARIABLES AVAILABLE: .+? -->\n\n/, ''
+			else text
+			entry.html = markdown entry.md
+			editOptions.editable = false
+		options.onKeydown = (event)->
+			return unless event.keyCode is 13
+			event.preventDefault()
+			document.execCommand 'insertHTML', false, '\r\n'
 
-		options
+	reactive options
 
-$cms.enable = ({ref})->
-	$cms.ref = ref
-	ref.value ?= {strings: {}}
-
+$cms.load = (strings)->
+	$cms.strings = strings
 	effect ->
 		document.body.setAttribute 'data-cms-highlight', $cms.settings.highlight
 

@@ -1,50 +1,5 @@
 import {effect} from '@vue/reactivity'
 
-export merge =(a, bs...)->
-	for b in bs
-		for k, v of b
-			a[k] = v
-	a
-
-
-export mergeClass =(a, bs...)->
-	for b in bs
-		for k, v of b
-			if k is 'class'
-				a.class ?= {}
-				a.class[k] = b.class[k] for k of b.class
-			else
-				a[k] = v
-	a
-
-
-
-export premerge =(a, bs...)->
-	for b in bs
-		for k, v of b
-			a[k] = v if a[k] is undefined
-	a
-
-export literal = do ->
-	Thing = (type)-> (fn)->
-		if typeof fn is 'object'
-			obj = fn
-			fn =->obj
-		type: type
-		default: fn
-	Object: Thing Object
-	Array: Thing Array
-	String: Thing String
-
-export touch =(type='tap', fn=->)->
-	if typeof type is 'function'
-		fn = type
-		type = 'tap'
-	name: 'touch'
-	rawName: "touch:#{type}"
-	arg: type
-	value: fn
-
 export mutate =(obj, fn)->
 	fn.call this, obj
 	obj
@@ -74,7 +29,6 @@ export clamp =(x, min, max)->
 	Math.max min, Math.min x, max
 
 export tokenize =(s)->s.trim().replace(/[^A-Za-z0-9]+/g, '-')
-
 
 SymbolRegistry = new WeakMap
 export symbolize =(object)->

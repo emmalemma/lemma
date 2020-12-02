@@ -44,14 +44,17 @@ scheduled = false
 schedule𝑓 = (effect)->
 	effect.element.needsRerender = true
 	parentEffect = effect
+	console.log 'marking render on', effect.element
 	while (parentEffect = parentEffect.parent) and not (parentEffect.element.childNeedsRerender or parentEffect.element.needsRerender)
+		console.log 'tracing render to', parentEffect.element
 		parentEffect.element.childNeedsRerender = true
 
-	unless scheduled
-		scheduled = true
+	console.log 'scheduled?', scheduled, 'root', effect.rootElement
+	unless effect.rootElement.renderScheduled
+		effect.rootElement.renderScheduled = true
 		# queueMicrotask preempts some DOM behaviors (e.g. checkboxes)
 		setTimeout (->
-			scheduled = false
+			effect.rootElement.renderScheduled = false
 			# perf: should flag actual root of mutation
 			checkRenders effect.rootElement), 0
 
@@ -63,7 +66,7 @@ effectCatcher = (element, effectFn)->
 		lazy: true
 	activeEffect.parent = _activeEffect
 	activeEffect.element = element
-	activeEffect.rootElement = rootElement
+	activeEffect.rootElement = _activeEffect?.rootElement or rootElement
 	do activeEffect
 	activeEffect = _activeEffect
 
@@ -147,8 +150,6 @@ makeOrRetrieve = (keyProps)->
 		element._args = keyProps._args
 		return element
 
-
-
 _elements =  (keyProps, args...)->
 	for arg in args
 		switch typeof arg
@@ -192,22 +193,8 @@ _elements =  (keyProps, args...)->
 		else
 			makeEffect element, bodyFn
 
-	lastProperElement = element
-
-	return element
+	return lastProperElement = element
 
 export elements = elementBuilder _elements
 
 export state = reactive
-
-export makeTag = (tagName, contextFn)->
-	return (inputs)->
-		renderFn = contextFn inputs or {}
-		# initialize state stack
-		els = elementBuilder(elements)
-		target = document.createElement tagName
-
-		effectCatcher target, ->
-			rootElement ?= parentElement = target
-			renderFn els
-		target

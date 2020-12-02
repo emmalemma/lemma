@@ -1,6 +1,7 @@
 export default {
   presets: [["@babel/env", {
-      "useBuiltIns": "entry",
-      "corejs": 3
+      "useBuiltIns": "usage",
+      "corejs": 3,
+      "modules": false
     }]]
 }

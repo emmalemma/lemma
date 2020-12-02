@@ -1,177 +1,83 @@
-import {reactive, toRaw, effect, stop} from '@vue/reactivity'
-import {watch} from './util'
 import {LocalDatabase} from './database'
+import {watch} from './util'
+import {stop, toRaw} from '@vue/reactivity'
 
-import {fetcher, doAsync} from './remoting'
-#
-#	target api:
-# 	object = remote id: x
-#	await remote.resolve object
-#	await remote.load object
-#	await remote.sync object
-#
+Records = new WeakMap
 
-# 1. load on read
-# 2. save on write
-# 3. populate cursors
+dofer =(fn)->fn()
 
-PersistentRecords = new WeakMap
+idBuilder = (innerFn)->
+	id = null
+	proxy = new Proxy (->),
+		get: (target, prop)->
+			id = prop
+			proxy
+		apply: (target, it, args)->
+			args.unshift id
+			innerFn.apply it, args
 
-remote = local = persist = null
+ObjectStore = ({db, version, store})->
+	db = LocalDatabase.open db, version, [store]
+	set: (id, value)->
+		(await db).setObject store, id, value
+	get: (id)->
+		(await db).getObject store, id
 
+persistenceStrategies =
+	indexeddb: (options)->
+		db = ObjectStore options
 
-export persist = (state = {})->
-	shell = reactive state.value or {}
+		store: (id, state)->
+			await db.set id, state
+		load: (id)->
+			await db.get id
 
-	record = reactive
-		id: state.id
-		rev: state.rev ? -1
+	rest: ({endpoint, id})->
+		fetcher = RestFetcher endpoint
 
-		store: state.store or 'uncategorized'
-		state: 'pending'
-		owner: state.owner
-		value: shell
-		watch: ->
-			record._effect ?= watch (->shell), (->
-				if record.state is 'synced'
-					record.rev += 1
-					persist.sync shell), deep: true
-		unwatch: ->
-			stop record._effect
-			record._effect = null
+		store: (id, state)->
+			await fetcher.post id, state
+		load: (id)->
+			await fetcher.get id
 
-	if record.owner is 'remote'
-		record.retrieve =-> fetcher.get "#{remote.url}/#{record.store}/#{record.id or ''}"
-		record.push =-> fetcher.post "#{remote.url}/#{record.store}/#{record.id}", body: {id: record.id, rev: record.rev, value: toRaw shell}
-	else if record.owner is 'local'
-		record.retrieve =->
-			out = await (await local.database).getObject record.store, record.id
-			out
-		record.push =->
-			await (await local.database).setObject record.store, record.id, id: record.id, rev: record.rev, value: toRaw shell
-			{value: shell, id: record.id, rev: record.rev}
+export persistence = (options)->
+	for type, typeOptions of options
+		strategy = persistenceStrategies[type] typeOptions
 
-	record.watch()
+	watchRecord = (record)->
+		record.watch = watch (->record.state), ->
+			strategy.store record.id, toRaw record.state
 
-	PersistentRecords.set shell, record
+	stopWatch = (record)->
+		stop record.watch
 
-	unless state.sync is no
-		persist.sync shell
-	else
-		record.state = 'synced'
+	merge = (record, state)->
+		stopWatch record
+		if Array.isArray record.state
+			record.state.splice 0, record.state.length
+			record.state.push x for x in state
+		else
+			for k of record.state
+				delete record.state[k] unless k of state
+			for k, v of state
+				record.state[k] = v
+		watchRecord record
 
-	shell
+	persistent = (id, state)->
+		record = {id, state}
 
-persist.record =(shell)->
-	PersistentRecords.get shell
+		Records.set state, record
 
-persist.promise =(shell)->
-	persist.record(shell).promise
+		watchRecord record
 
-persist.collection = ({store, owner})->
-	shell = reactive {}
-
-	record =
-		store: store
-		owner: owner
-
-	proxy = new Proxy (shell),
-		get: (target, prop)-> target[prop]
-		has: (target, key)->key in target
-		getOwnPropertyDescriptor: (target, key) -> Object.getOwnPropertyDescriptor target, key
-		set: (target, prop, value)->
-			debugger
-			persisted =
-				store: record.store
-				id: prop
-				rev: 0
-				value: value
-			if record.owner is 'local'
-				await (await local.database).setObject record.store, prop, {id: prop, rev: 0, value}
-				return target[prop] = local persisted
-			else if record.owner is 'remote'
-				await fetcher.post "#{remote.url}/#{record.store}/#{prop}", body: {id: prop, rev: 0, value: toRaw(value)}
-				return target[prop] = remote persisted
-		deleteProperty: (target, prop)->
-			await if record.owner is 'local'
-				(await local.database).deleteObject record.store, prop
-			delete target[prop]
-			prop
-
-	record.promise = doAsync ->
-		allResults = await if record.owner is 'remote'
-			Object.values await fetcher.get "#{remote.url}/#{record.store}"
-		else if record.owner is 'local'
-			(await local.database).getAll record.store
-
-		for result in allResults
-			result.sync = no
-			result.owner = record.owner
-			result.store = record.store
-			shell[result.id] = persist result
-	# watch.shallow (->shell), ->
-	# 	for
-	#
-	PersistentRecords.set proxy, record
-	proxy
-
-persist.destroy =(shell)->
-	record = persist.record shell
-	if record.owner is 'local'
-		(await local.database).deleteObject record.store, record.id
-
-persist.sync = (shell)->
-	record = persist.record(shell)
-	record.promise = doAsync ->
-		record.state = 'loading'
-		try
-			result = await record.retrieve()
-		catch e
-			unless e.status is 404
+		dofer ->
+			try
+				out = await strategy.load id
+			catch e
+				console.error "Strategy load error", strategy, record, id
 				throw e
-				e = null
+			merge record, out
 
-		if result and result.rev > record.rev
-			record.unwatch()
-			shell[k] = v for k, v of result.value
-			record.watch()
+		return state
 
-			record.id = result.id
-			record.rev = result.rev
-			record.state = 'synced'
-
-		else if not result or record.rev > result.rev
-			if not result
-				record.rev = 0
-
-			record.state = 'saving'
-			result = await record.push()
-
-			record.id = result.id
-			record.rev = result.rev
-			record.state = 'synced'
-
-		shell
-
-
-export remote = (record)->
-	record.owner = 'remote'
-	persist record
-
-remote.connect = (url)->
-	remote.url = url
-
-remote.collection = (record)->
-	record.owner = 'remote'
-	persist.collection record
-
-export local = (record)->
-	record.owner = 'local'
-	persist record
-
-local.collection = (record)->
-	record.owner = 'local'
-	persist.collection record
-
-local.connect = (database, version, stores = [])->
-	local.database = LocalDatabase.open database, version, stores
+	return idBuilder persistent

@@ -1,14 +1,15 @@
 {
-  "name": "ur",
-  "version": "1.0.0",
-  "description": "",
+  "name": "ur-",
+  "version": "0.0.1",
+  "description": "a radically terse frontend framework",
   "main": "index.coffee",
+  "module": "index.coffee",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "private": "true",
-  "author": "",
+  "author": "emma",
   "license": "ISC",
   "dependencies": {
     "@vue/reactivity": "^3.0.0"
@@ -16,5 +17,6 @@
   "devDependencies": {
     "@babel/runtime": "^7.11.2",
     "snarkdown": "^2.0.0"
-  }
+},
+  "sideEffects": false
 }
