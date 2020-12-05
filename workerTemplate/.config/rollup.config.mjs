@@ -8,15 +8,15 @@ import json from '@rollup/plugin-json';
 import polyfills from 'rollup-plugin-node-polyfills';
 import analyzer from 'rollup-plugin-analyzer';
 import html from '@rollup/plugin-html';
+import {terser} from 'rollup-plugin-terser';
 
 import 'coffeescript/register';
 import {workerInterface} from 'ur/plugins';
 
 export default {
-  input: 'main.coffee',
+  input: 'index.coffee',
   plugins: [
       coffeescript(),
-      analyzer({hideDeps: false, summaryOnly: false}),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
       workerInterface({matches: /_worker.[a-z]+$/}),
@@ -33,14 +33,22 @@ export default {
       }),
       json(),
       polyfills(),
-	// nodeResolve({ extensions: ['.js', '.coffee'] }),
-	// commonjs({
-	//   extensions: ['.js', '.coffee']
-  // }),
-	injectProcessEnv({
-        env: {}}
-    ),
+	injectProcessEnv({env: {}}),
+    terser({
+        ecma: 6,
+        module: true,
+        mangle: {keep_fnames: true},
+        compress: {
+            keep_fnames: true,
+            ecma: 6
+        },
+        // keep_classnames: true,
+        keep_fnames: true,
+        toplevel: true,
+    }),
+
     html({title: 'Template App'}),
+    analyzer({hideDeps: false, summaryOnly: false}),
 ],
 	output: {
 		file: 'public/bundle.js',

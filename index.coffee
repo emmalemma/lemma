@@ -12,3 +12,5 @@ export * from './util'
 export * from './markdown'
 export * from './elements'
 export * from './interface'
+
+export * from './extensions'

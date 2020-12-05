@@ -26,6 +26,7 @@
       } else if (event === 'callExport') {
         [callId, exp, args] = args;
         try {
+          console.log('calling', module, exp, args);
           result = (await module[exp].apply(module[exp], args));
           return postMessage(['resolve', callId, result]);
         } catch (error) {

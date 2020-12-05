@@ -38,3 +38,5 @@ export prohibitThis = (name)-> new Proxy {},
         throw new Prohibited "access to `this.#{prop}` in #{name}"
 
 export class RegistrationError extends NamedError
+
+export class ExtensionError extends NamedError

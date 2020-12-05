@@ -4,7 +4,7 @@ import {DataStore} from './datastore.js'
 
 JsonResponse = (context, next)->
 	await next()
-	if context.response.json
+	if 'json' of context.response
 		if context.response.body
 			console.error json: context.response.json
 			throw new Error "Set JSON as well as raw body!"

@@ -4,10 +4,9 @@ export mutate =(obj, fn)->
 	fn.call this, obj
 	obj
 
-export delay =(delay, fn)->
-	throw new Error 'Wrong delay api' if fn
+export delay =(ms)->
 	new Promise (res) ->
-		setTimeout res, delay
+		setTimeout res, ms
 
 export quoted =(s)->"\"#{s}\""
 

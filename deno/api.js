@@ -11,7 +11,7 @@ import {
 
 JsonResponse = async function(context, next) {
   await next();
-  if (context.response.json) {
+  if ('json' in context.response) {
     if (context.response.body) {
       console.error({
         json: context.response.json

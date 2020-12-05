@@ -8,6 +8,7 @@ Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
 	{request, response} = context
 	rid = request.serverRequest.conn.rid
 
+	console.log context.params, harnesses
 	harnesses[context.params.target].postMessage ['callExport', rid, context.params.endpoint, await request.body().value, request]
 
 	try
@@ -19,6 +20,8 @@ Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
 	response.json = result
 
 onWorkerMessage = ({data: [event, callId, result]})->
+	console.log [event, callId, result]
+	
 	if event is 'resolve'
 		requests[callId].resolve result
 	else if event is 'reject'

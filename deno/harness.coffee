@@ -15,6 +15,7 @@ self.onmessage = ({data: [event, args...]})->
 		else if event is 'callExport'
 			[callId, exp, args] = args
 			try
+				console.log 'calling', module, exp, args
 				result = await module[exp].apply module[exp], args
 				postMessage ['resolve', callId, result]
 			catch e

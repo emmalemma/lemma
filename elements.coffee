@@ -65,7 +65,7 @@ makeEffect = (element, bodyFn)->
 
 		_last = lastProperElement
 		lastProperElement = null
-		do bodyFn
+		bodyFn.call element
 
 		lastElement = if lastProperElement
 			lastProperElement.nextElementSibling

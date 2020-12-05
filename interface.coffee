@@ -6,7 +6,7 @@ import {fetcher} from './remoting'
 export workerInterface =
 	rpc: (worker, endpoint)-> ->
 		console.log 'calling RPC with', worker, endpoint, arguments
-		result = await fetcher.post "/workers/#{worker}/endpoints/#{endpoint}", body: arguments
+		result = await fetcher.post "/workers/#{worker}/endpoints/#{endpoint}", body: (x for x in arguments)
 		console.log 'rpc returned', [result]
 		result
 

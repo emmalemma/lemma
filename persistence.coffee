@@ -70,7 +70,7 @@ export persistence = (options)->
 
 		watchRecord record
 
-		dofer ->
+		record.loadedᴾ = dofer ->
 			try
 				out = await strategy.load id
 			catch e
@@ -82,3 +82,6 @@ export persistence = (options)->
 		return state
 
 	return idBuilder persistent
+
+persistence.record = (state)->
+	Records.get state

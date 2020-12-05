@@ -17,6 +17,7 @@ Api.router.post("/workers/:target/endpoints/:endpoint", async function(context) 
   var e, request, response, result, rid;
   ({request, response} = context);
   rid = request.serverRequest.conn.rid;
+  console.log(context.params, harnesses);
   harnesses[context.params.target].postMessage(['callExport', rid, context.params.endpoint, (await request.body().value), request]);
   try {
     result = (await new Promise(function(resolve, reject) {
@@ -33,6 +34,7 @@ Api.router.post("/workers/:target/endpoints/:endpoint", async function(context) 
 onWorkerMessage = function({
     data: [event, callId, result]
   }) {
+  console.log([event, callId, result]);
   if (event === 'resolve') {
     requests[callId].resolve(result);
   } else if (event === 'reject') {
