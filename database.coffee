@@ -1,3 +1,8 @@
+# Promisified IndexedDB ObjectStore wrapper. Pretty self-explanatory
+#
+# db = LocalDatabase.open dbname, version, [store]
+# value = await (await db).getObject store, key
+
 export class LocalDatabase
 	@open: (dbname, version, stores = [])->
 		new Promise (resolve, reject)->

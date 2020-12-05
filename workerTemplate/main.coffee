@@ -1,8 +1,7 @@
 import {elements, state, toRaw} from 'ur'
 
-import music from './music.json'
 # cms().load state {}
-
+music = []
 # import {elements, persistent, state} from 'ur-'
 import {persistence} from 'ur'
 persistent = persistence indexeddb:
@@ -28,52 +27,72 @@ todoActions = (todos)->
 
 todoItem = (todos)-> (todo)->
 
+import {random, err} from './random_worker'
+
+rand = state {value: -1}
+document.body.appendChild div.randGetter ->
+	div.value rand.value.toString()
+	button.getRand 'get rand', onclick: ->
+		rand.value = await random()
+	button.getRand 'get double rand', onclick: ->
+		random()
+		random()
+		rand.value = await random()
+	button.err 'err', onclick: ->
+		try
+			await err()
+		catch e
+			console.error 'err', e
+
 # parallel state contexts
+#
+# context todos =->
+# 	state = {todos}
+# 	context todoActions =->
+#
+# 	consumer ConsumedTodoActions # ? = consume todoActions, todoActionComponent
+#
+#
+# consume todos, ({todos}, {todoActions})->
+# 	div.todos ->
+# 		consume todoActions, ({todos})->
+# 			div.todoActions ->
+#
+# 		for todo in todos
+# 			consume todoTask, for:todo, ({todos}, todo)->
+# 				div.todo.$for(todo) ->
+#
+#
+# import {fish} from '../server/api'
+#
+# import {auth, doLogin} from '../server/auth'
+#
+# account = doLogin𝑓 username, password
+#
+# await fish𝑓() # rpc, embedded auth...
+#
+# todoActionComponent = ({todos})->
+# 	div.todoActions ->
+#
+# consume todos, ({todos}, {todoActions})->
+# 	div.todos ->
+# 		consume todoActions, todoActionComponent
+#
+# consume todos ({todos}, {ConsumedTodoActions})->
+# 	div.todos ->
+# 		ConsumedTodoActions()
+#
+# define todos = ->
+# 	define todoActions = ->
+#
+import {todos as remoteTodos, clearCompleted} from './main_worker'
 
-context todos =->
-	state = {todos}
-	context todoActions =->
-
-	consumer ConsumedTodoActions # ? = consume todoActions, todoActionComponent
-
-
-consume todos, ({todos}, {todoActions})->
-	div.todos ->
-		consume todoActions, ({todos})->
-			div.todoActions ->
-
-		for todo in todos
-			consume todoTask, for:todo, ({todos}, todo)->
-				div.todo.$for(todo) ->
-
-
-import {fish} from '../server/api'
-
-import {auth, doLogin} from '../server/auth'
-
-account = doLogin𝑓 username, password
-
-await fish𝑓() # rpc, embedded auth...
-
-todoActionComponent = ({todos})->
-	div.todoActions ->
-
-consume todos, ({todos}, {todoActions})->
-	div.todos ->
-		consume todoActions, todoActionComponent
-
-consume todos ({todos}, {ConsumedTodoActions})->
-	div.todos ->
-		ConsumedTodoActions()
-
-define todos = ->
-	define todoActions = ->
-
+clearCompleted()
 
 do ->
 	todos = persistent.editableTodos state []
 	document.body.appendChild div.todoAppEditable ->
-		children.todoActions()
+		todoActions todos
 		div.todos ->
 			for todo in todos
 				div.todo.$for(todo)  (todo) ->
@@ -105,7 +124,7 @@ coords = [
 	[5, 7]
 ]
 
-import midiParser from 'midi-parser-js'
+# import midiParser from 'midi-parser-js'
 lanes = state music
 transpose = state steps: 0
 

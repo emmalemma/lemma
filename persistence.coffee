@@ -76,6 +76,7 @@ export persistence = (options)->
 			catch e
 				console.error "Strategy load error", strategy, record, id
 				throw e
+			return unless out
 			merge record, out
 
 		return state

@@ -1,35 +1,13 @@
 import {effect, stop, reactive} from '@vue/reactivity'
+import {elementBuilder} from './builder.coffee'
 
+# Stack variables
 parentElement = null
-
-elementBuilder = (el)->
-	el_chainer = (tagName)->
-		props = {tagName}
-		proxy = new Proxy (->),
-			get: (target, prop)->
-				if typeof prop is 'string'
-					if prop is '$for'
-						return (args...)->
-							props._args = args
-							proxy
-					else
-						if props.class
-							props.class += " #{prop}"
-						else
-							props.class = "#{prop}"
-				else if typeof prop is 'symbol'
-					props._key = prop
-				proxy
-			apply: (target, it, args)->
-				args.unshift props
-				props = {tagName}
-				el.apply it, args
-
-	el_generator = new Proxy {},
-		get: (target, prop)->
-			if prop is '$'
-				el_generator
-			else el_chainer(prop)
+rootElement = null
+activeEffect = null
+cursor = null
+insertElement = null
+lastProperElement = null
 
 checkRenders = (target)->
 	if target.needsRerender
@@ -39,8 +17,6 @@ checkRenders = (target)->
 		checkRenders child for child in target.children
 		target.childNeedsRerender = false
 
-rootElement = null
-scheduled = false
 schedule𝑓 = (effect)->
 	effect.element.needsRerender = true
 	parentEffect = effect
@@ -49,7 +25,6 @@ schedule𝑓 = (effect)->
 		console.log 'tracing render to', parentEffect.element
 		parentEffect.element.childNeedsRerender = true
 
-	console.log 'scheduled?', scheduled, 'root', effect.rootElement
 	unless effect.rootElement.renderScheduled
 		effect.rootElement.renderScheduled = true
 		# queueMicrotask preempts some DOM behaviors (e.g. checkboxes)
@@ -58,7 +33,6 @@ schedule𝑓 = (effect)->
 			# perf: should flag actual root of mutation
 			checkRenders effect.rootElement), 0
 
-activeEffect = null
 effectCatcher = (element, effectFn)->
 	_activeEffect = activeEffect
 	element.effect = activeEffect = effect effectFn,
@@ -70,9 +44,6 @@ effectCatcher = (element, effectFn)->
 	do activeEffect
 	activeEffect = _activeEffect
 
-cursor = null
-insertElement = null
-lastProperElement = null
 
 clearEffects = (element)->
 	stop element.effect if element.effect

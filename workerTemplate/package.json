@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "rollup --config .config/rollup.config.mjs",
     "watch": "rollup -w --config .config/rollup.config.mjs"
