@@ -1,7 +1,12 @@
 module = {}
 
 loadWorker = (filename)->
-	module = await import(filename)
+	try
+		module = await import(filename)
+	catch e
+		console.error 'module load error', filename
+		console.error e
+		throw e
 
 self.onmessage = ({data: [event, args...]})->
 	try

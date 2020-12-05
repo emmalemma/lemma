@@ -6,6 +6,10 @@ harnesses = {};
 requests = {};
 
 import {
+  reactive
+} from 'https://esm.sh/@vue/reactivity@3.0.4';
+
+import {
   Api
 } from './api.js';
 

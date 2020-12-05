@@ -5,7 +5,15 @@
   module = {};
 
   loadWorker = async function(filename) {
-    return module = (await import(filename));
+    var e;
+    try {
+      return module = (await import(filename));
+    } catch (error) {
+      e = error;
+      console.error('module load error', filename);
+      console.error(e);
+      throw e;
+    }
   };
 
   self.onmessage = async function({
