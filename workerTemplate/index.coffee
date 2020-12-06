@@ -195,6 +195,7 @@ EditableTodos =->
 							button 'edit', onclick: -> editable.task = yes
 
 
+import midiParser from 'midi-parser-js'
 Music =->
 	coords = [
 		[3, 0]
@@ -212,7 +213,6 @@ Music =->
 		[5, 7]
 	]
 
-	# import midiParser from 'midi-parser-js'
 	lanes = state music
 	transpose = state steps: 0
 
@@ -280,6 +280,53 @@ Music =->
 # 		})
 # 	}
 # }));
+TicTac =->
+	rules = state
+		turn: 'x'
+		board: {}
+		turns: 0
+		max_turns: 9
+
+	win = (n)->
+		rules.turn = null
+		rules.winner = rules.board[n]
+	test =(board)->
+		for i in [0..2]
+			if board[i] and (board[i] is board[i+3] and board[i] is board[i+6])
+				return win i
+		for i in [0,3,6]
+			if board[i] and (board[i] is board[i+1] and board[i] is board[i+2])
+				return win i
+		for x in [-1, +1]
+			i = 4
+			if board[i] and (board[i] is board[i - 3 + x] and board[i] is board[i + 3 - x])
+				return win i
+
+		if rules.turns is rules.max_turns
+			rules.winner = 'no one'
+			rules.turn = null
+
+	play =(n)->
+		return if rules.board[n]
+		rules.board[n] = rules.turn
+		rules.turn = if rules.turn is 'x' then 'o' else 'x'
+		rules.turns += 1
+		test rules.board
+
+	div.ticTac ->
+		div.actions ->
+			if rules.turn
+				div.turn "#{rules.turn}'s turn"
+			else if rules.winner
+				div.win "#{rules.winner} won!"
+				button.reset 'Replay', onclick: ->
+					rules.board = {}
+					rules.winner = null
+					rules.turn = 'x'
+					rules.turns = 0
+		div.squares ->
+			for n in [0..8] then div.square.$for(n) (n)->
+				button "#{if rules.board[n] then rules.board[n] else ' '}", onclick: -> play n
 
 Blog =->
 	{textarea} = elements
@@ -306,11 +353,26 @@ Blog =->
 
 document.body.appendChild StyleEditor()
 document.body.appendChild div.tabs ->
-	apps = [Todos, EditableTodos, Music, Blog, Calculator, RandGetter]
-	tabs = state app: null
-	for app in apps then div.tab.$for(app) (app)->
-		button app.name or '[Unnamed App]', onclick: -> tabs.app = app
+	div.header ->
+		div.logo innerHTML: """<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 168.1 168.1" style="enable-background:new 0 0 168.1 168.1;" xml:space="preserve">
+<g>
+	<path d="M142.119,19.245C123.68,9.39,99.36,12.383,84.077,26.134C68.72,12.394,44.361,9.433,25.984,19.245
+		C9.968,27.737,0,44,0,61.658c0,5.056,0.84,10.08,2.326,14.408c7.839,33.931,58.163,78.583,81.751,78.583
+		c23.537,0,73.823-44.656,81.527-78.008c1.652-4.908,2.495-9.92,2.495-14.988C168.1,44,158.141,27.731,142.119,19.245z
+		 M154.157,73.396c-7.294,31.578-54.816,69.347-70.08,69.347c-16.987,0-63.271-39.567-70.303-69.921
+		c-1.256-3.661-1.86-7.409-1.86-11.157c0-13.241,7.526-25.478,19.638-31.902c5.64-3.021,12.056-4.58,18.542-4.58
+		c11.416,0,22.162,4.843,29.492,13.308l4.543,5.199l4.475-5.199c11.415-13.247,32.384-17.056,47.97-8.728
+		c12.112,6.424,19.639,18.661,19.639,31.902C156.188,65.406,155.58,69.155,154.157,73.396z M149.506,61.658
+		c0,3.114-0.523,6.244-1.564,9.324c-0.425,1.253-1.56,1.993-2.824,1.993c-0.317,0-0.63-0.022-0.952-0.131
+		c-1.564-0.526-2.386-2.222-1.86-3.776c0.837-2.473,1.286-4.98,1.286-7.41c0-8.891-5.049-17.083-13.172-21.362
+		c-3.852-2.057-8.021-3.114-12.397-3.114c-1.665,0-2.96-1.308-2.96-2.96c0-1.653,1.295-2.955,2.96-2.955
+		c5.341,0,10.45,1.253,15.188,3.776C143.257,40.366,149.506,50.556,149.506,61.658z"/></g></svg>"""
+		div.brand 'Little Theorem'
 
+	apps = {Todos, EditableTodos, Music, Blog, Calculator, RandGetter, TicTac}
+	tabs = state app: null
+	for name, app of apps then div.tab.$for(app) (app)->
+		button name or '[Unnamed App]', onclick: -> tabs.app = app
 	div.app ->
 		tabs.app?() or div.blank ->
 			span 'Choose an app'
