@@ -21,7 +21,7 @@ Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
 
 onWorkerMessage = ({data: [event, callId, result]})->
 	console.log [event, callId, result]
-	
+
 	if event is 'resolve'
 		requests[callId].resolve result
 	else if event is 'reject'
@@ -40,6 +40,7 @@ export serveWorkers = ({path, matches})->
 			worker_files.push "#{path}/#{entry.name}"
 
 	for worker_file in worker_files
+		console.log 'loading worker', worker_file
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
 		harness = harnesses[target] = new Worker new URL('harness.js', `import.meta.url`).href, type: 'module', deno: true
 		harness.postMessage ['loadWorker', "file:///#{Deno.cwd()}/#{worker_file}"]

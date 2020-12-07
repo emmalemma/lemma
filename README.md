@@ -1,6 +1,6 @@
 ### **ur-**
 
- | **ur-** is a radically terse frontend framework inspired by [Vue 3](), [Imba]() and [Coffeescript]().
+ | **ur-** is a frighteningly terse frontend framework inspired by [Vue 3](), [Imba]() and [KoffeeKup]().
 
 
 ```coffeescript

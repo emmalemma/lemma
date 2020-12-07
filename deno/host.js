@@ -7,12 +7,20 @@ import {
   serveWorkers
 } from './workers.js';
 
-Api.serve('./public');
+import {
+  serveBundles
+} from './bundler.js';
 
 serveWorkers({
   path: '.',
   matches: /_worker\.js$/
 });
+
+serveBundles({
+  path: './public'
+});
+
+Api.serve('./public');
 
 (async function() {
   console.log('Listening on', 9010);

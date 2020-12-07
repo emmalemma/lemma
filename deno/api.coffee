@@ -11,6 +11,15 @@ JsonResponse = (context, next)->
 		context.response.headers.set 'Content-Type', 'application/json'
 		context.response.body = JSON.stringify context.response.json, null, 2
 
+HtmlResponse = (context, next)->
+	await next()
+	if 'html' of context.response
+		if context.response.body
+			console.error html: context.response.html
+			throw new Error "Set HTML as well as raw body!"
+		context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
+		context.response.body = context.response.html
+
 RequestLogging = ({request, response}, next)->
 		console.log request.method, request.url.href
 		try
@@ -53,6 +62,7 @@ export Api =
 			console.error event.error
 		@app.use RequestLogging
 		@app.use JsonResponse
+		@app.use HtmlResponse
 		@app.use @router.routes()
 		@app.use @router.allowedMethods()
 		@app.use hook for hook in @staticStack

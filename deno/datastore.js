@@ -81,7 +81,8 @@ export var DataStore = class DataStore {
       e = error;
       console.log('existing json not found');
     }
-    return (await writeJson(jsonPath, object));
+    await writeJson(jsonPath, object);
+    return console.log('wrote', object, 'to', jsonPath);
   }
 
 };

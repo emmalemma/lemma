@@ -30,3 +30,18 @@ exports.workerInterface = ({matches})->
 
 			#{exportInterfaces.join '\n\n'}
 			"""
+
+fs = require 'fs'
+
+exports.autoInput = ({dir, matches})->
+	name: 'auto-input-plugin'
+	options: (options)->
+		options.input = []
+		new Promise (res, rej)->
+			fs.readdir dir, (err, files)->
+				rej err if err
+				for file in files
+					if file.match matches
+						options.input.push "#{dir}/#{file}"
+				console.log 'bundling', options.input
+				res options

@@ -61,6 +61,7 @@ export var serveWorkers = async function({path, matches}) {
   results = [];
   for (i = 0, len = worker_files.length; i < len; i++) {
     worker_file = worker_files[i];
+    console.log('loading worker', worker_file);
     target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1];
     harness = harnesses[target] = new Worker(new URL('harness.js', import.meta.url).href, {
       type: 'module',

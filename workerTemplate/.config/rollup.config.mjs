@@ -8,14 +8,18 @@ import json from '@rollup/plugin-json';
 import polyfills from 'rollup-plugin-node-polyfills';
 import analyzer from 'rollup-plugin-analyzer';
 import html from '@rollup/plugin-html';
+import brotli from 'rollup-plugin-brotli'
 import {terser} from 'rollup-plugin-terser';
 
 import 'coffeescript/register';
-import {workerInterface} from 'ur/plugins';
+import {workerInterface, autoInput} from 'ur/plugins';
 
 export default {
-  input: 'index.coffee',
+  input: ['.'],// ['index.coffee', 'demo.coffee'],
   plugins: [
+      autoInput({dir: '.', matches: /\.coffee$/}),
+      brotli(),
+
       coffeescript(),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
@@ -34,25 +38,23 @@ export default {
       json(),
       polyfills(),
 	injectProcessEnv({env: {}}),
+
     terser({
         ecma: 6,
         module: true,
-        mangle: {keep_fnames: true},
         compress: {
-            keep_fnames: true,
             ecma: 6
         },
-        // keep_classnames: true,
-        keep_fnames: true,
         toplevel: true,
     }),
 
     html({title: 'Template App'}),
-    analyzer({hideDeps: false, summaryOnly: false}),
+    analyzer({hideDeps: false, summaryOnly: true}),
 ],
 	output: {
-		file: 'public/bundle.js',
-		format: 'iife', // immediately-invoked function expression — suitable for <script> tags
+        dir: './public',
+		// file: 'public/bundle.js',
+		format: 'es',
 		sourcemap: true
 	},
 }
