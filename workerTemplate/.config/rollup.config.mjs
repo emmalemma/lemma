@@ -17,7 +17,7 @@ import {workerInterface, autoInput} from 'ur/plugins';
 export default {
   input: ['.'],// ['index.coffee', 'demo.coffee'],
   plugins: [
-      autoInput({dir: '.', matches: /\.coffee$/}),
+      autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/}),
       brotli(),
 
       coffeescript(),

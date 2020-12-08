@@ -121,19 +121,22 @@ makeOrRetrieve = (keyProps)->
 		element._args = keyProps._args
 		return element
 
+combineProps =(target, ext)->
+	for k, v of ext
+		switch k
+			when 'style', 'className'
+				target[k] ?= ''
+				target[k] += ' ' + v
+			else target[k] = v
+
 _elements =  (keyProps, args...)->
+	props = {}
 	for arg in args
 		switch typeof arg
 			when 'function' then bodyFn = arg
 			when 'object'
-				if props
-					props[k] = v for k, v of arg
-				else
-					props = arg
+				combineProps props, arg
 			when 'string' then textContent = arg
-
-	unless props
-		props = {}
 
 	if textContent
 		props.textContent = textContent

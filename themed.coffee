@@ -1,44 +1,47 @@
-import {effect, stop} from '@vue/reactivity'
-import {watch} from './util'
+sheet = do ->
+	document.head.appendChild el = document.createElement 'style'
+	el.sheet
+idx = 0
 
-export DynamicTheme =->
+styleMap = {}
+classMap = {}
+mutatorMap = {}
 
-	new Proxy {},
-		get: (target, classKey)->
-			selector = ".#{classKey.replace /_/g, '-'}"
 
-export themes = ->
+_makeRuleClass = (name, style)->
+	styleMap[style] ?= (
+		className = "#{name}-#{idx += 1}"
+		sheet.insertRule ".#{className} {#{style}}"
+		classMap[className] = style
+		{className}
+	)
 
-styleElement = null
-createStyleElement =->
-	el = document.createElement 'style'
-	el.id = 'style-theme'
-	el.textContent = '/* initialized */'
-	document.head.appendChild el
-	el
+_ruleMutator = (name, mutate)->
+	(inClasses...)->
+		handle = inClasses.map((x)->x.className).join ', '
+		(mutatorMap[name] ?= {})[handle] ?= (
+			className = "#{name}-#{idx += 1}"
+			baseRule = ''
+			# for {className, mutator} in classes
+			mutated = []
+			for {className: subClass, mutate: subMutate, mutated: subMutated} in inClasses
+				if subMutate
+					sheet.insertRule rule = "#{subMutate mutate '.'+className} {#{classMap[subClass]}}"
+					mutated.push {mutate: subMutate, className: subClass}
 
-watchDocumentStyles =(cb)->
-	storedText = null
-	doWatch =->
-		sheets = document.styleSheets
-		ruleTexts = []
-		for sheet in sheets
-			ruleTexts.push rule.cssText for rule in sheet.cssRules
-		ruleTexts.sort()
-		canonicalRuleString = ruleTexts.join '\n'
-		if storedText and storedText isnt canonicalRuleString
-			cb canonicalRuleString
-		storedText = canonicalRuleString
-	setInterval doWatch, 250
+					for mutate2 in subMutated
+						sheet.insertRule "#{mutate2.mutate subMutate mutate '.'+className} {#{classMap[mutate2.className]}}"
 
-themes.enable =({ref})->
-	themes.ref = ref
-	ref.value ?= {}
-	styleElement ?= createStyleElement()
+					console.log name, className, subClass, subMutate, rule
+				else
+					console.log name, className, subClass
+					baseRule += classMap[subClass]
+			classMap[className] = baseRule
+			sheet.insertRule "#{mutate '.'+className} {#{baseRule}}"
 
-	watchEffect = watch (->themes.ref.value), ->
-		styleElement.textContent = themes.ref.value?.storedText or '/* empty */'
-		stop watchEffect
+			{className, mutate, mutated}
+		)
 
-	watchDocumentStyles (ruleString)->
-		ref.value.storedText = ruleString
+# These are obviously not "pure", i.e. they have global side effects. But we want them to be tree-shaken unless they are used
+`export const makeRuleClass = (name, style)=> /* @__PURE__ */ _makeRuleClass(name, style)`
+`export const ruleMutator = (name, mutate)=> /* @__PURE__ */ _ruleMutator(name, mutate)`

@@ -33,7 +33,7 @@ exports.workerInterface = ({matches})->
 
 fs = require 'fs'
 
-exports.autoInput = ({dir, matches})->
+exports.autoInput = ({dir, matches, exclude})->
 	name: 'auto-input-plugin'
 	options: (options)->
 		options.input = []
@@ -41,7 +41,7 @@ exports.autoInput = ({dir, matches})->
 			fs.readdir dir, (err, files)->
 				rej err if err
 				for file in files
-					if file.match matches
+					if file.match(matches) and not file.match exclude
 						options.input.push "#{dir}/#{file}"
 				console.log 'bundling', options.input
 				res options

@@ -1,7 +1,8 @@
 import {Extend} from 'ur'
 do Extend
 
-import {elements, state, toRaw} from 'ur'
+import {elements, state, toRaw, enableTouch} from 'ur'
+enableTouch document
 
 # cms().load state {}
 music = []

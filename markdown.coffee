@@ -1,6 +1,6 @@
 import snarkdown from 'snarkdown'
 
-export markdown = (md) =>
+export markdown = (md)->
 	parts = md.split(/(?:\r?\n){2,}/)
 	return snarkdown(parts[0]) if parts.length is 1
 	parts.map (l)->
@@ -8,3 +8,5 @@ export markdown = (md) =>
 			snarkdown(l)
 		else "<p>#{snarkdown(l)}</p>"
 	.join('\n\n')
+
+markdown.html = (md)->innerHTML: markdown md

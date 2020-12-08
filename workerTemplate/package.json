@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "build": "rollup --config .config/rollup.config.mjs",
     "watch": "rollup -w --config .config/rollup.config.mjs"
