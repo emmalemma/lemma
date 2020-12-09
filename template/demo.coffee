@@ -1,16 +1,16 @@
 ### @__PUBLISH__ ###
 
-import {Extend} from 'ur'
+import {Extend} from 'lemma'
 do Extend
 
-import {elements, state, toRaw, enableTouch} from 'ur'
+import {elements, state, toRaw, enableTouch} from 'lemma'
 enableTouch document
 
 # cms().load state {}
 music = []
 # import {elements, persistent, state} from 'ur-'
-import {persistence} from 'ur'
-import {delay} from 'ur'
+import {persistence} from 'lemma'
+import {delay} from 'lemma'
 persistent = persistence indexeddb:
 	db: 'testdb'
 	version: 1
@@ -23,7 +23,7 @@ import {grid, gridArea, size} from './theme'
 
 dofer =(fn)->fn()
 
-import {watch} from 'ur'
+import {watch} from 'lemma'
 import {getTheme, saveTheme} from './theme_worker'
 
 StyleEditor =->

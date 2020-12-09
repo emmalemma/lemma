@@ -34,7 +34,7 @@ exports.workerInterface = ({matches})->
 			"""export #{if exp.name is 'default' then 'default ' else "const #{exp.name} = "} workerInterface.#{exp.type}("#{target}", '#{exp.name}');"""
 
 		return map: {mappings: ''}, code: """
-			import {workerInterface} from 'ur';
+			import {workerInterface} from 'lemma';
 
 			#{exportInterfaces.join '\n\n'}
 			"""

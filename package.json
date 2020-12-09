@@ -1,7 +1,7 @@
 {
-  "name": "ur-",
+  "name": "lemma",
   "version": "0.0.1",
-  "description": "a radically terse frontend framework",
+  "description": "a smaller result used to prove a theorem",
   "main": "index.coffee",
   "module": "index.coffee",
   "type": "module",
@@ -17,6 +17,6 @@
   "devDependencies": {
     "@babel/runtime": "^7.11.2",
     "snarkdown": "^2.0.0"
-},
+  },
   "sideEffects": false
 }

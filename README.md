@@ -1,10 +1,11 @@
-### **ur-**
+### **lemma**
 
- | **ur-** is a frighteningly terse frontend framework inspired by [Vue 3](), [Imba]() and [KoffeeKup]().
+ | A lemma is a smaller, proven result which is used in the proof of a more consequential theorem.
 
+Lemma is a full-stack JS library that... well, you'll see.
 
 ```coffeescript
-import {elements, state} from 'ur-'
+import {elements, state} from 'lemma'
 {div, span, button, input} = elements
 
 tasks = state []
@@ -20,7 +21,7 @@ document.body.appendChild div.todoApp ->
 
 
 ```javascript
-import {elements, state} from 'ur-';
+import {elements, state} from 'lemma';
 const {div, span, button, input} = elements;
 
 const tasks = state([]);

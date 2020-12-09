@@ -1,7 +1,7 @@
 ### @__PUBLISH__ ###
 LEMMA = publish: true
 
-import {watch, elements, state, toRaw, enableTouch, markdown} from 'ur'
+import {watch, elements, state, toRaw, enableTouch, markdown} from 'lemma'
 
 import {fullPage, fullWidth, flexRow, block, pad, margin, hover, children, specify, select, backgroundBrand, backgroundAttend, backgroundFade, largeText, mainText, lightBlue, color, mainBlue, cursor, fontSize, background, brandColor} from './theme'
 

@@ -12,7 +12,7 @@ import brotli from 'rollup-plugin-brotli'
 import {terser} from 'rollup-plugin-terser';
 
 import 'coffeescript/register';
-import {workerInterface, autoInput} from 'ur/plugins';
+import {workerInterface, autoInput} from 'lemma/plugins';
 
 export default {
   input: ['.'],// ['index.coffee', 'demo.coffee'],

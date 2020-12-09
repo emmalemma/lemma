@@ -1,4 +1,4 @@
-import {elements} from 'ur'
+import {elements} from 'lemma'
 
 import {fullPage, fullWidth, flexRow, block, pad, margin, hover, children, specify, select, pads, backgroundBrand, backgroundAttend, backgroundFade, largeText, mainText, lightBlue, color, mainBlue, cursor, fontSize, background, brandColor} from './theme'
 
