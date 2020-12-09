@@ -101,7 +101,7 @@ applyProps = (element, props)->
 	element.cachedProps = props
 
 matchKeyProps = (element, keyProps)->
-	return false unless element.tagName.toLowerCase() is keyProps.tagName.toLowerCase() and element.keyClass is keyProps.class
+	return false unless element.tagName.toLowerCase() is keyProps.tagName.toLowerCase() and element.dataset.class is keyProps.class
 	if keyProps._args
 		for arg, idx in keyProps._args
 			return false unless arg is element._args[idx]
@@ -116,8 +116,7 @@ makeOrRetrieve = (keyProps)->
 
 	else
 		element = document.createElement keyProps.tagName
-		element.className = keyProps.class
-		element.keyClass = keyProps.class
+		element.dataset.class = keyProps.class if keyProps.class
 		element._args = keyProps._args
 		return element
 

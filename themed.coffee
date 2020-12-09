@@ -7,7 +7,6 @@ styleMap = {}
 classMap = {}
 mutatorMap = {}
 
-
 _makeRuleClass = (name, style)->
 	styleMap[style] ?= (
 		className = "#{name}-#{idx += 1}"
@@ -22,7 +21,6 @@ _ruleMutator = (name, mutate)->
 		(mutatorMap[name] ?= {})[handle] ?= (
 			className = "#{name}-#{idx += 1}"
 			baseRule = ''
-			# for {className, mutator} in classes
 			mutated = []
 			for {className: subClass, mutate: subMutate, mutated: subMutated} in inClasses
 				if subMutate
@@ -45,3 +43,17 @@ _ruleMutator = (name, mutate)->
 # These are obviously not "pure", i.e. they have global side effects. But we want them to be tree-shaken unless they are used
 `export const makeRuleClass = (name, style)=> /* @__PURE__ */ _makeRuleClass(name, style)`
 `export const ruleMutator = (name, mutate)=> /* @__PURE__ */ _ruleMutator(name, mutate)`
+
+export styleKey = (key)->
+	(value)->makeRuleClass "#{key}", "#{key}: #{value};"
+
+export styleValue = (value)-> value
+
+export styleProxy = (key, convertNumber)->
+	convert = if convertNumber
+		(n)-> if n.match /[0-9\.]+/ then convertNumber n else n
+	else (n)->n
+	new Proxy {},
+		get: (target, prop)->
+			console.log {prop}
+			makeRuleClass "#{key}-#{prop.replace /[^a-zA-Z0-9]+/g, '-'}", "#{key}: #{convert prop};"

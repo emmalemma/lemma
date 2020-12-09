@@ -17,6 +17,8 @@ persistent = persistence indexeddb:
 
 {div, span, button, input} = elements
 
+import {grid, gridArea, size} from './layout'
+
 dofer =(fn)->fn()
 
 import {watch} from 'ur'
@@ -104,9 +106,11 @@ RandGetter =->
 			catch e
 				console.error 'err', e
 
-Calculator =-> div.calculator ->
+
+Calculator =-> div.calculator grid("repeat(3, min-content) / auto"), ->
 	operation = state number: '', op: null, store: 0
 	execute =->
+		return unless operation.op
 		opand = parseInt operation.number, 10
 		operation.number = (operation.op operation.store, opand).toString()
 		operation.op = null
@@ -119,8 +123,8 @@ Calculator =-> div.calculator ->
 
 	div.display ->
 		input value: operation.number
-	div.numbers ->
-		for n in [0..9] then div.number.$for(n) (n)->
+	div.numbers grid("repeat(4, min-content) / repeat(3, min-content)"), ->
+		for n in [0..9] then div.number.$for(n) (if n is 0 then gridArea('4 / 2') else {}), (n)->
 			button.digit n.toString(), onclick: ->
 				operation.number += n.toString()
 	div.ops ->
@@ -325,9 +329,9 @@ TicTac =->
 					rules.winner = null
 					rules.turn = 'x'
 					rules.turns = 0
-		div.squares ->
+		div.squares grid("repeat(3, min-content) / repeat(3, min-content)"), ->
 			for n in [0..8] then div.square.$for(n) (n)->
-				button "#{if rules.board[n] then rules.board[n] else ' '}", onclick: -> play n
+				button size('1em', '1em'), "#{if rules.board[n] then rules.board[n] else ' '}", onclick: -> play n
 
 Blog =->
 	{textarea} = elements
@@ -335,7 +339,7 @@ Blog =->
 	div.blog ->
 		div.header ->
 			div.brand 'My New Blog'
-			div.logo innerHTML: """<svg id="Capa_1" enable-background="new 0 0 512 512" height="100%" viewBox="0 0 512 512" width="100px" xmlns="http://www.w3.org/2000/svg"><g><path d="m336 431h-160c-5.523 0-10-4.477-10-10v-154.795l-16.907 23.67c-11.263 15.767-29.447 25.125-48.824 25.125h-65.269c-19.33 0-35-15.67-35-35 0-19.33 15.67-35 35-35h45.908l50.049-68.817c18.754-25.787 48.987-41.183 80.873-41.183h88.34c31.886 0 62.119 15.396 80.874 41.183l50.048 68.817h45.908c19.33 0 35 15.67 35 35 0 19.33-15.67 35-35 35h-65.269c-19.377 0-37.561-9.358-48.824-25.126l-16.907-23.669v154.795c0 5.523-4.477 10-10 10z" fill="#ffcdbe"/><path d="m477 245h-45.908l-50.049-68.817c-18.754-25.787-48.987-41.183-80.873-41.183h-44.17v296h80c5.523 0 10-4.477 10-10v-154.795l16.907 23.669c11.263 15.768 29.447 25.126 48.824 25.126h65.269c19.33 0 35-15.67 35-35 0-19.33-15.67-35-35-35z" fill="#ffbeaa"/><path d="m151 468.922c0-19.803 13.417-36.988 32.629-41.791l172.054-43.013c18.892-4.723 38.345-7.118 57.817-7.118 37.22 0 67.5 30.28 67.5 67.5s-30.28 67.5-67.5 67.5h-219.422c-23.753 0-43.078-19.325-43.078-43.078z" fill="#989dec"/><path d="m317.922 512h-219.422c-37.22 0-67.5-30.28-67.5-67.5s30.28-67.5 67.5-67.5c19.472 0 38.925 2.395 57.817 7.118l172.054 43.013c19.212 4.803 32.629 21.988 32.629 41.791 0 23.753-19.325 43.078-43.078 43.078z" fill="#bceaf9"/><path d="m328.371 427.131-72.371-18.092v102.961h61.922c23.753 0 43.078-19.325 43.078-43.078 0-19.803-13.417-36.988-32.629-41.791z" fill="#acceff"/><path d="m256 160c-44.112 0-80-35.888-80-80s35.888-80 80-80 80 35.888 80 80-35.888 80-80 80z" fill="#ffdecf"/><path d="m336 80c0-44.112-35.888-80-80-80v160c44.112 0 80-35.888 80-80z" fill="#ffcdbe"/></g></svg>"""
+			div.logo size('2em', '2em'), innerHTML: """<svg id="Capa_1" enable-background="new 0 0 512 512" height="100%" viewBox="0 0 512 512" width="100px" xmlns="http://www.w3.org/2000/svg"><g><path d="m336 431h-160c-5.523 0-10-4.477-10-10v-154.795l-16.907 23.67c-11.263 15.767-29.447 25.125-48.824 25.125h-65.269c-19.33 0-35-15.67-35-35 0-19.33 15.67-35 35-35h45.908l50.049-68.817c18.754-25.787 48.987-41.183 80.873-41.183h88.34c31.886 0 62.119 15.396 80.874 41.183l50.048 68.817h45.908c19.33 0 35 15.67 35 35 0 19.33-15.67 35-35 35h-65.269c-19.377 0-37.561-9.358-48.824-25.126l-16.907-23.669v154.795c0 5.523-4.477 10-10 10z" fill="#ffcdbe"/><path d="m477 245h-45.908l-50.049-68.817c-18.754-25.787-48.987-41.183-80.873-41.183h-44.17v296h80c5.523 0 10-4.477 10-10v-154.795l16.907 23.669c11.263 15.768 29.447 25.126 48.824 25.126h65.269c19.33 0 35-15.67 35-35 0-19.33-15.67-35-35-35z" fill="#ffbeaa"/><path d="m151 468.922c0-19.803 13.417-36.988 32.629-41.791l172.054-43.013c18.892-4.723 38.345-7.118 57.817-7.118 37.22 0 67.5 30.28 67.5 67.5s-30.28 67.5-67.5 67.5h-219.422c-23.753 0-43.078-19.325-43.078-43.078z" fill="#989dec"/><path d="m317.922 512h-219.422c-37.22 0-67.5-30.28-67.5-67.5s30.28-67.5 67.5-67.5c19.472 0 38.925 2.395 57.817 7.118l172.054 43.013c19.212 4.803 32.629 21.988 32.629 41.791 0 23.753-19.325 43.078-43.078 43.078z" fill="#bceaf9"/><path d="m328.371 427.131-72.371-18.092v102.961h61.922c23.753 0 43.078-19.325 43.078-43.078 0-19.803-13.417-36.988-32.629-41.791z" fill="#acceff"/><path d="m256 160c-44.112 0-80-35.888-80-80s35.888-80 80-80 80 35.888 80 80-35.888 80-80 80z" fill="#ffdecf"/><path d="m336 80c0-44.112-35.888-80-80-80v160c44.112 0 80-35.888 80-80z" fill="#ffcdbe"/></g></svg>"""
 		div.body ->
 			div.subhead "Posts on my blog"
 			div.posts ->
@@ -352,10 +356,10 @@ Blog =->
 					posts.push title: inputs.title.value, body: inputs.body.value
 					field.value = '' for _, field of inputs
 
-document.body.appendChild StyleEditor()
+# document.body.appendChild StyleEditor()
 document.body.appendChild div.tabs ->
 	div.header ->
-		div.logo innerHTML: """<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 168.1 168.1" style="enable-background:new 0 0 168.1 168.1;" xml:space="preserve">
+		div.logo size('2em', '2em'), innerHTML: """<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 168.1 168.1" style="enable-background:new 0 0 168.1 168.1;" xml:space="preserve">
 <g>
 	<path d="M142.119,19.245C123.68,9.39,99.36,12.383,84.077,26.134C68.72,12.394,44.361,9.433,25.984,19.245
 		C9.968,27.737,0,44,0,61.658c0,5.056,0.84,10.08,2.326,14.408c7.839,33.931,58.163,78.583,81.751,78.583
