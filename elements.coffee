@@ -38,6 +38,8 @@ effectCatcher = (element, effectFn)->
 	element.effect = activeEffect = effect effectFn,
 		scheduler: schedule𝑓
 		lazy: true
+		# onTrack: (args...)->console.log element, 'track', args
+		# onTrigger: (args...)->console.log element, 'trigger', args
 	activeEffect.parent = _activeEffect
 	activeEffect.element = element
 	activeEffect.rootElement = _activeEffect?.rootElement or rootElement

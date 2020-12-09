@@ -3,6 +3,7 @@ import {elements} from './elements'
 
 export enableTouch = (document)-> document.head.appendChild elements.meta name:'viewport', content:'width=device-width'
 
+export dofer = (fn)->fn()
 
 export mutate =(obj, fn)->
 	fn.call this, obj

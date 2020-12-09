@@ -31,6 +31,42 @@ Api.router.post("/workers/:target/endpoints/:endpoint", async function(context) 
   return response.json = result;
 });
 
+Api.router.post("/workers/:target/continuation/:id", async function(context) {
+  var e, request, response, result, rid;
+  ({request, response} = context);
+  rid = request.serverRequest.conn.rid;
+  console.log(context.params, harnesses);
+  harnesses[context.params.target].postMessage(['continuation', rid, context.params.id, (await request.body().value), request]);
+  try {
+    result = (await new Promise(function(resolve, reject) {
+      return requests[rid] = {resolve, reject};
+    }));
+  } catch (error1) {
+    e = error1;
+    response.status = 500;
+    result = e;
+  }
+  return response.json = result;
+});
+
+Api.router.post("/workers/:target/reactive/:id", async function(context) {
+  var e, request, response, result, rid;
+  ({request, response} = context);
+  rid = request.serverRequest.conn.rid;
+  console.log(context.params, harnesses);
+  harnesses[context.params.target].postMessage(['reactive', rid, context.params.id, (await request.body().value), request]);
+  try {
+    result = (await new Promise(function(resolve, reject) {
+      return requests[rid] = {resolve, reject};
+    }));
+  } catch (error1) {
+    e = error1;
+    response.status = 500;
+    result = e;
+  }
+  return response.json = result;
+});
+
 onWorkerMessage = function({
     data: [event, callId, result]
   }) {

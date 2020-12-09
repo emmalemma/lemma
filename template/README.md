@@ -1,3 +1,3 @@
-# This is an ur template project.
+# This is a Lemma template project.
 
 # To configure:

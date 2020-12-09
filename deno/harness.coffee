@@ -1,12 +1,46 @@
 module = {}
 
+import {isReactive, toRaw} from 'https://esm.sh/@vue/reactivity@3.0.4'
+
 loadWorker = (filename)->
 	try
 		module = await import(filename)
+		console.log 'loaded module', module
 	catch e
 		console.error 'module load error', filename
 		console.error e
 		throw e
+
+wrapValue = (result)->
+	raw: result
+
+idx = 0
+continuations = {}
+registerContinuation = (fn)->
+	id = idx += 1
+	continuations[id] = fn
+	{continue: id}
+
+reactiveIds = new WeakMap
+reactives = {}
+registerReactive = (rx)->
+	id = reactiveIds.get(rx) or (
+		id = idx += 1
+		reactiveIds.set rx, id
+		id
+	)
+	reactives[id] = rx
+	{reactive: id, raw: toRaw rx}
+
+processRpc = (callId, result)->
+	result = switch typeof result
+		when 'function'
+			registerContinuation result
+		when 'object'
+			if isReactive result
+				registerReactive result
+		else wrapValue result
+	postMessage ['resolve', callId, result]
 
 self.onmessage = ({data: [event, args...]})->
 	try
@@ -16,10 +50,16 @@ self.onmessage = ({data: [event, args...]})->
 			[callId, exp, args] = args
 			try
 				console.log 'calling', module, exp, args
-				result = await module[exp].apply module[exp], args
-				postMessage ['resolve', callId, result]
+				processRpc callId, await module[exp].apply module[exp], args
 			catch e
-				postMessage ['reject', callId, e]
+				postMessage ['reject', callId, {message: e.message}]
+		else if event is 'continuation'
+			[callId, continuationId, args] = args
+			processRpc callId, await continuations[continuationId].apply null, args
+		else if event is 'reactive'
+			[callId, rxId, raw] = args
+			reactives[rxId][k] = v for k, v of raw
+			postMessage ['resolve', callId, {done: true}]
 	catch e
 		console.error e
 		throw e

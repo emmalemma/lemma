@@ -2,7 +2,6 @@ harnesses = {}
 requests = {}
 import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 
-
 import {Api} from './api.js'
 Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
 	{request, response} = context
@@ -18,6 +17,37 @@ Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
 		response.status = 500
 		result = e
 	response.json = result
+
+Api.router.post "/workers/:target/continuation/:id", (context)->
+	{request, response} = context
+	rid = request.serverRequest.conn.rid
+
+	console.log context.params, harnesses
+	harnesses[context.params.target].postMessage ['continuation', rid, context.params.id, await request.body().value, request]
+
+	try
+		result = await new Promise (resolve, reject)->
+			requests[rid] = {resolve, reject}
+	catch e
+		response.status = 500
+		result = e
+	response.json = result
+
+Api.router.post "/workers/:target/reactive/:id", (context)->
+	{request, response} = context
+	rid = request.serverRequest.conn.rid
+
+	console.log context.params, harnesses
+	harnesses[context.params.target].postMessage ['reactive', rid, context.params.id, await request.body().value, request]
+
+	try
+		result = await new Promise (resolve, reject)->
+			requests[rid] = {resolve, reject}
+	catch e
+		response.status = 500
+		result = e
+	response.json = result
+
 
 onWorkerMessage = ({data: [event, callId, result]})->
 	console.log [event, callId, result]

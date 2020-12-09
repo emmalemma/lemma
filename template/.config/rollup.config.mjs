@@ -7,15 +7,23 @@ import babel from '@rollup/plugin-babel';
 import json from '@rollup/plugin-json';
 import polyfills from 'rollup-plugin-node-polyfills';
 import analyzer from 'rollup-plugin-analyzer';
-import html from '@rollup/plugin-html';
+// import html from '@rollup/plugin-html';
+import brotli from 'rollup-plugin-brotli'
+import {terser} from 'rollup-plugin-terser';
+
+import 'coffeescript/register';
+import {workerInterface, autoInput} from 'ur/plugins';
 
 export default {
-  input: 'client/main.coffee',
+  input: ['.'],// ['index.coffee', 'demo.coffee'],
   plugins: [
+      autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/}),
+      brotli(),
+
       coffeescript(),
-      analyzer({hideDeps: false, summaryOnly: false}),
       resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
       commonJs(),
+      workerInterface({matches: /_worker.[a-z]+$/}),
       babel({
         babelHelpers: 'bundled',
         exclude: [/core-js/],
@@ -29,18 +37,24 @@ export default {
       }),
       json(),
       polyfills(),
-	// nodeResolve({ extensions: ['.js', '.coffee'] }),
-	// commonjs({
-	//   extensions: ['.js', '.coffee']
-  // }),
-	injectProcessEnv({
-        env: {}}
-    ),
-    html({title: 'Template App'}),
+	injectProcessEnv({env: {}}),
+
+    {} || terser({
+        ecma: 6,
+        module: true,
+        compress: {
+            ecma: 6
+        },
+        toplevel: true,
+    }),
+
+    // html({title: 'Template App'}),
+    analyzer({hideDeps: false, summaryOnly: true}),
 ],
 	output: {
-		file: 'public/bundle.js',
-		format: 'iife', // immediately-invoked function expression — suitable for <script> tags
+        dir: './public',
+		// file: 'public/bundle.js',
+		format: 'es',
 		sourcemap: true
 	},
 }

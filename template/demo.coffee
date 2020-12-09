@@ -1,3 +1,5 @@
+### @__PUBLISH__ ###
+
 import {Extend} from 'ur'
 do Extend
 
@@ -17,7 +19,7 @@ persistent = persistence indexeddb:
 
 {div, span, button, input} = elements
 
-import {grid, gridArea, size} from './layout'
+import {grid, gridArea, size} from './theme'
 
 dofer =(fn)->fn()
 
@@ -357,7 +359,9 @@ Blog =->
 					field.value = '' for _, field of inputs
 
 # document.body.appendChild StyleEditor()
-document.body.appendChild div.tabs ->
+import {layout} from './layout'
+
+layout -> div.tabs ->
 	div.header ->
 		div.logo size('2em', '2em'), innerHTML: """<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 168.1 168.1" style="enable-background:new 0 0 168.1 168.1;" xml:space="preserve">
 <g>

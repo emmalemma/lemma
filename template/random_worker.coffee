@@ -1,3 +1,5 @@
+### @__API__ ###
+
 export random =->
 	console.log 'Server generated a random number: ', result = Math.random()
 	result
