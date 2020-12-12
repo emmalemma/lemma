@@ -8,7 +8,8 @@ import {
 } from './workers.js';
 
 import {
-  serveBundles
+  serveBundles,
+  watchBundle
 } from './bundler.js';
 
 serveWorkers({
@@ -23,6 +24,7 @@ serveBundles({
 Api.serve('./public');
 
 (async function() {
+  await watchBundle();
   console.log('Listening on', 9010);
-  return (await Api.host(9010));
+  return Api.host(9010);
 })();

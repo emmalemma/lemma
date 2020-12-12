@@ -31,14 +31,14 @@ export class DataStore
 			if stat.isFile
 				return await readJson jsonPath
 		catch e
-			console.log 'JSON not found'
+			#
 
 		try
 			stat = await Deno.stat dirPath = "#{@path}/#{id}"
 			if stat.isDirectory
 				return await @readAll dirPath
 		catch e
-			console.log 'dir not found'
+			#
 
 		return null
 

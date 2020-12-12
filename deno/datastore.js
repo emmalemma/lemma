@@ -56,17 +56,17 @@ export var DataStore = class DataStore {
       }
     } catch (error) {
       e = error;
-      console.log('JSON not found');
     }
     try {
+      
       stat = (await Deno.stat(dirPath = `${this.path}/${id}`));
       if (stat.isDirectory) {
         return (await this.readAll(dirPath));
       }
     } catch (error) {
       e = error;
-      console.log('dir not found');
     }
+    
     return null;
   }
 

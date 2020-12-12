@@ -14,3 +14,4 @@ export * from './elements'
 export * from './interface'
 
 export * from './extensions'
+export * from './builder'

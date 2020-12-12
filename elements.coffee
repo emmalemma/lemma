@@ -12,24 +12,35 @@ lastProperElement = null
 checkRenders = (target)->
 	if target.needsRerender
 		do target.effect
-		target.needsRerender = false
+		target.needsRerender = target.childNeedsRerender = false
+		target.dataset.needsRerender = target.dataset.childNeedsRerender = false
+		# console.log 'clearing render for', target
+
 	else if target.childNeedsRerender
 		checkRenders child for child in target.children
 		target.childNeedsRerender = false
+		# target.dataset.childNeedsRerender = false
+		# console.log 'clearing child render for', target
+
 
 schedule𝑓 = (effect)->
 	effect.element.needsRerender = true
+	# effect.element.dataset.needsRerender = true
 	parentEffect = effect
-	console.log 'marking render on', effect.element
+	# console.log 'marking render on', effect.element
 	while (parentEffect = parentEffect.parent) and not (parentEffect.element.childNeedsRerender or parentEffect.element.needsRerender)
-		console.log 'tracing render to', parentEffect.element
+		# console.log 'tracing render to', parentEffect.element
 		parentEffect.element.childNeedsRerender = true
+		# parentEffect.element.dataset.childNeedsRerender = true
 
 	unless effect.rootElement.renderScheduled
 		effect.rootElement.renderScheduled = true
+		# effect.rootElement.dataset.renderScheduled = true
+		# console.log 'scheduling render under', effect.rootElement
 		# queueMicrotask preempts some DOM behaviors (e.g. checkboxes)
 		setTimeout (->
 			effect.rootElement.renderScheduled = false
+			# effect.rootElement.dataset.renderScheduled = false
 			# perf: should flag actual root of mutation
 			checkRenders effect.rootElement), 0
 
@@ -136,7 +147,10 @@ _elements =  (keyProps, args...)->
 		switch typeof arg
 			when 'function' then bodyFn = arg
 			when 'object'
-				combineProps props, arg
+				if Array.isArray arg
+					combineProps props, opts for opts in arg
+				else
+					combineProps props, arg
 			when 'string' then textContent = arg
 
 	if textContent

@@ -20,3 +20,17 @@ export var serveBundles = function({path}) {
     }
   });
 };
+
+export var watchBundle = async function() {
+  console.log('Running rollup watcher...');
+  // process = await Deno.run cmd: "rollup.cmd -w -c .config/rollup.config.mjs".split(' ')
+  console.log('Revoking run permission.');
+  await Deno.permissions.revoke({
+    name: 'run'
+  });
+  return window.addEventListener('unload', () => {
+    return console.log('EVENT unload event');
+  });
+};
+
+// await process.close()

@@ -25,10 +25,19 @@ RequestLogging = ({request, response}, next)->
 		try
 			await next()
 		catch e
-			console.error e.stack
+			console.error "LOG", e.stack
 			response.status = e.status or 500
 		finally
 			console.log request.method, request.url.href, response.status
+
+NotFound =(context, next)->
+	try
+		await next()
+	catch e
+		console.log 'notfound error', e
+		if context.response.status is 404
+			context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
+			context.response.body = "<script src='/not_found.js' type='module'></script>"
 
 export Api =
 	app: new Oak.Application
@@ -38,7 +47,6 @@ export Api =
 		@staticStack.push (context) ->
 			await Oak.send context, context.request.url.pathname,
 				root: path
-				index: "index.html"
 
 	serveDataObject: (key, path)->
 		dataStore = new DataStore path
@@ -61,6 +69,7 @@ export Api =
 		@app.addEventListener 'error', (event)->
 			console.error event.error
 		@app.use RequestLogging
+		@app.use NotFound
 		@app.use JsonResponse
 		@app.use HtmlResponse
 		@app.use @router.routes()
