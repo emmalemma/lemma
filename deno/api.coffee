@@ -2,6 +2,9 @@ import {Oak} from './deps.js'
 
 import {DataStore} from './datastore.js'
 
+import {AuthIdentity} from './auth.js'
+import Config from './config.js'
+
 JsonResponse = (context, next)->
 	await next()
 	if 'json' of context.response
@@ -39,6 +42,7 @@ NotFound =(context, next)->
 			context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
 			context.response.body = "<script src='/not_found.js' type='module'></script>"
 
+
 export Api =
 	app: new Oak.Application
 	router: new Oak.Router
@@ -72,7 +76,18 @@ export Api =
 		@app.use NotFound
 		@app.use JsonResponse
 		@app.use HtmlResponse
+		@app.use AuthIdentity
 		@app.use @router.routes()
 		@app.use @router.allowedMethods()
 		@app.use hook for hook in @staticStack
-		await @app.listen {port}
+
+		@app.addEventListener 'error', (event)->
+			console.error "#{new Date()} Oak uncaught #{event.error.name}"
+			console.error event.error.stack
+			Deno.exit(5)
+
+		await @app.listen
+			port: Config.port or 9010
+			secure: true
+			certFile: Config.tls.certPath
+			keyFile: Config.tls.keyPath

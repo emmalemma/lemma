@@ -26,7 +26,7 @@ export elementBuilder = (el𝑓)->
 					props._key = prop
 				proxy
 			apply: (target, it, args)->
-				args.unshift style for style in styles
+				args.unshift styles
 				args.unshift props
 				props = {tagName}
 				el𝑓.apply it, args
@@ -39,5 +39,11 @@ export elementBuilder = (el𝑓)->
 				generator
 			else chainer(prop)
 
-export style = (el, styles...)->
-	ProxyStyles(el).push style for style in styles
+_extend = (el, exts...)->
+	unless styles = ProxyStyles.get(el)
+		throw new Error "Tried to extend something that wasn't a lemma element builder"
+	# console.log 'equal?', ProxyStyles.get(el) is styles
+	styles.push ext for ext in exts
+	el
+
+`export const extend = (...args)=> /* @__PURE__ */ _extend.apply(null, args)`

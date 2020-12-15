@@ -1,4 +1,4 @@
-import {fs} from './deps.js'
+import * as fs from "https://deno.land/std@0.80.0/fs/mod.ts"
 
 readJson = (path)->
 	JSON.parse await Deno.readTextFile path

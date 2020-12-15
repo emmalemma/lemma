@@ -11,9 +11,9 @@ import {
 loadWorker = async function(filename) {
   var e;
   try {
-    module = (await import(filename));
-    return console.log('loaded module', module);
+    return module = (await import(filename));
   } catch (error) {
+    // console.log 'loaded module', module
     e = error;
     console.error('module load error', filename);
     console.error(e);
@@ -62,6 +62,8 @@ processRpc = function(callId, result) {
       case 'object':
         if (isReactive(result)) {
           return registerReactive(result);
+        } else {
+          return wrapValue(result);
         }
         break;
       default:
@@ -74,17 +76,27 @@ processRpc = function(callId, result) {
 self.onmessage = async function({
     data: [event, ...args]
   }) {
-  var callId, continuationId, e, exp, k, raw, rxId, v;
+  var callId, context, continuationId, e, exp, k, raw, rxId, v;
+  console.log(event, args);
   try {
     if (event === 'loadWorker') {
       return loadWorker(args[0]);
     } else if (event === 'callExport') {
-      [callId, exp, args] = args;
+      [callId, exp, args, context] = args;
       try {
-        console.log('calling', module, exp, args);
-        return processRpc(callId, (await module[exp].apply(module[exp], args)));
+        if (typeof module[exp] === 'function') {
+          if (!Array.isArray(args)) {
+            args = [args];
+          }
+          return processRpc(callId, (await module[exp].apply(context, args)));
+        } else {
+          // if typeof args is 'object'
+          // 	module[exp][k] = v for k, v of args
+          return postMessage(['resolve', callId, toRaw(module[exp])]);
+        }
       } catch (error) {
         e = error;
+        console.error(e);
         return postMessage([
           'reject',
           callId,
@@ -95,7 +107,7 @@ self.onmessage = async function({
       }
     } else if (event === 'continuation') {
       [callId, continuationId, args] = args;
-      return processRpc(callId, (await continuations[continuationId].apply(null, args)));
+      return processRpc(callId, (await continuations[continuationId].apply(identity, args)));
     } else if (event === 'reactive') {
       [callId, rxId, raw] = args;
       for (k in raw) {

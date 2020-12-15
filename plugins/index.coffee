@@ -15,7 +15,15 @@ exportName = (node)->
 	if node.specifiers?.length
 		return node.specifiers[0].exported.name
 
-exportType = -> 'rpc'
+exportType = (node)->
+	# if node.declaration
+	# 	for decl in node.declaration.declarations
+	# 		# console.log 'node decl', decl
+	# 		if decl.init.type is 'CallExpression'
+	# 			console.log 'callee', decl.init.callee.name
+	# 			if decl.init.callee.name is 'reactive'
+	# 				return 'reactive'
+	'rpc'
 
 exports.workerInterface = ({matches})->
 	name: 'worker-interface-plugin'

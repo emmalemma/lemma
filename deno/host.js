@@ -8,9 +8,14 @@ import {
 } from './workers.js';
 
 import {
-  serveBundles,
-  watchBundle
+  serveBundles
 } from './bundler.js';
+
+import {
+  loadConfig
+} from './config.js';
+
+import Config from './config.js';
 
 serveWorkers({
   path: '.',
@@ -24,7 +29,7 @@ serveBundles({
 Api.serve('./public');
 
 (async function() {
-  await watchBundle();
-  console.log('Listening on', 9010);
-  return Api.host(9010);
+  await loadConfig(`file:///${Deno.cwd()}/.config/server.js`);
+  console.log('Listening on', Config.port);
+  return Api.host();
 })();

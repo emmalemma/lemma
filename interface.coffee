@@ -1,5 +1,5 @@
 import {reactive, toRaw} from '@vue/reactivity'
-import {watch} from './util'
+import {watch, dofer, timeout} from './util'
 import {fetcher} from './remoting'
 
 continuation = rpcResult = getReactive = null
@@ -22,12 +22,6 @@ rpcResult =	(worker, result)->
 	else result.raw
 
 export workerInterface =
-	rpc: (worker, endpoint)-> (args...)->
-		console.log 'calling RPC with', worker, endpoint, args
-		rpcResult worker, await fetcher.post "/workers/#{worker}/endpoints/#{endpoint}", body: args
-
-	reactive: (worker, target)->
-		shell = reactive {}
-		watch (->shell), ->
-			console.log 'updating remote reactive with', worker, target, shell
-		console.log 'loading remote reactive with', worker, target
+	rpc: (worker, exportName)-> (args...)->
+		console.log 'calling RPC with', worker, exportName, args
+		rpcResult worker, await fetcher.post "/#{worker}/#{exportName}", body: args

@@ -13,6 +13,9 @@ export delay =(ms)->
 	new Promise (res) ->
 		setTimeout res, ms
 
+export interval = (ms, cb)-> setInterval cb, ms
+export timeout = (ms, cb)-> setTimeout cb, ms
+
 export quoted =(s)->"\"#{s}\""
 
 export pluralize =(string, count)->
@@ -48,7 +51,11 @@ traverse =(value)->
 				traverse v
 
 export watch = (watcher, cb)->
-	doEffect = effect (->traverse watcher()), scheduler: (->cb(); doEffect())
+	scheduled = null
+	doEffect = effect (->traverse watcher()), scheduler: -> scheduled ?= timeout 0, ->
+		scheduled = null
+		cb()
+		doEffect()
 
 watch.shallow = (watcher, cb)->
 	doEffect = effect (->watcher()), scheduler: (->cb(); doEffect())

@@ -9,6 +9,12 @@ import {
   DataStore
 } from './datastore.js';
 
+import {
+  AuthIdentity
+} from './auth.js';
+
+import Config from './config.js';
+
 JsonResponse = async function(context, next) {
   await next();
   if ('json' in context.response) {
@@ -106,6 +112,7 @@ export var Api = {
     this.app.use(NotFound);
     this.app.use(JsonResponse);
     this.app.use(HtmlResponse);
+    this.app.use(AuthIdentity);
     this.app.use(this.router.routes());
     this.app.use(this.router.allowedMethods());
     ref = this.staticStack;
@@ -113,6 +120,16 @@ export var Api = {
       hook = ref[i];
       this.app.use(hook);
     }
-    return (await this.app.listen({port}));
+    this.app.addEventListener('error', function(event) {
+      console.error(`${new Date()} Oak uncaught ${event.error.name}`);
+      console.error(event.error.stack);
+      return Deno.exit(5);
+    });
+    return (await this.app.listen({
+      port: Config.port || 9010,
+      secure: true,
+      certFile: Config.tls.certPath,
+      keyFile: Config.tls.keyPath
+    }));
   }
 };

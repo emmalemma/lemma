@@ -13,7 +13,7 @@ checkRenders = (target)->
 	if target.needsRerender
 		do target.effect
 		target.needsRerender = target.childNeedsRerender = false
-		target.dataset.needsRerender = target.dataset.childNeedsRerender = false
+		# target.dataset.needsRerender = target.dataset.childNeedsRerender = false
 		# console.log 'clearing render for', target
 
 	else if target.childNeedsRerender
@@ -60,6 +60,7 @@ effectCatcher = (element, effectFn)->
 
 clearEffects = (element)->
 	stop element.effect if element.effect
+	cleaner() for cleaner in element.cleanups or []
 	for child in element.children
 		clearEffects child
 
@@ -131,6 +132,7 @@ makeOrRetrieve = (keyProps)->
 		element = document.createElement keyProps.tagName
 		element.dataset.class = keyProps.class if keyProps.class
 		element._args = keyProps._args
+		element.rerender
 		return element
 
 combineProps =(target, ext)->
@@ -153,7 +155,7 @@ _elements =  (keyProps, args...)->
 					combineProps props, arg
 			when 'string' then textContent = arg
 
-	if textContent
+	if textContent?
 		props.textContent = textContent
 
 	if (_args = keyProps._args) and (_bodyFn = bodyFn)
@@ -187,3 +189,11 @@ _elements =  (keyProps, args...)->
 export elements = elementBuilder _elements
 
 export state = reactive
+
+export cleanup =(cb)->
+	console.log
+	parentElement.cleanups ?= []
+	parentElement.cleanups.push cb
+
+export rerender =(element)->
+	schedule𝑓 element.effect if element.effect

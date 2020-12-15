@@ -3,27 +3,28 @@ requests = {}
 import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 
 import {Api} from './api.js'
-Api.router.post "/workers/:target/endpoints/:endpoint", (context)->
-	{request, response} = context
-	rid = request.serverRequest.conn.rid
 
-	console.log context.params, harnesses
-	harnesses[context.params.target].postMessage ['callExport', rid, context.params.endpoint, await request.body().value, request]
+hostWorker = (target)->
+	Api.router.post "/#{target}/:exportName", (context)->
+		{request, response} = context
+		rid = request.serverRequest.conn.rid
 
-	try
-		result = await new Promise (resolve, reject)->
-			requests[rid] = {resolve, reject}
-	catch e
-		response.status = 500
-		result = e
-	response.json = result
+		# console.log context.params, harnesses
+		harnesses[target].postMessage ['callExport', rid, context.params.exportName, await request.body().value, {identity: context.identity, headers: context.request.headers}]
+
+		try
+			result = await new Promise (resolve, reject)->
+				requests[rid] = {resolve, reject}
+		catch e
+			response.status = 500
+			result = e
+		response.json = result
 
 Api.router.post "/workers/:target/continuation/:id", (context)->
 	{request, response} = context
 	rid = request.serverRequest.conn.rid
 
-	console.log context.params, harnesses
-	harnesses[context.params.target].postMessage ['continuation', rid, context.params.id, await request.body().value, request]
+	harnesses[context.params.target].postMessage ['continuation', rid, context.params.id, await request.body().value, context.identity]
 
 	try
 		result = await new Promise (resolve, reject)->
@@ -37,8 +38,8 @@ Api.router.post "/workers/:target/reactive/:id", (context)->
 	{request, response} = context
 	rid = request.serverRequest.conn.rid
 
-	console.log context.params, harnesses
-	harnesses[context.params.target].postMessage ['reactive', rid, context.params.id, await request.body().value, request]
+	# console.log context.params, harnesses
+	harnesses[context.params.target].postMessage ['reactive', rid, context.params.id, await request.body().value, context.identity]
 
 	try
 		result = await new Promise (resolve, reject)->
@@ -72,6 +73,7 @@ export serveWorkers = ({path, matches})->
 	for worker_file in worker_files
 		console.log 'loading worker', worker_file
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
+		hostWorker target
 		harness = harnesses[target] = new Worker new URL('harness.js', `import.meta.url`).href, type: 'module', deno: true
 		harness.postMessage ['loadWorker', "file:///#{Deno.cwd()}/#{worker_file}"]
 		harness.onmessage = onWorkerMessage
