@@ -6,9 +6,9 @@
 
 ProxyStyles = new WeakMap
 
-export elementBuilder = (el𝑓)->
+export elementBuilder = (el𝑓, {svg} = {svg: false})->
 	chainer = (tagName)->
-		props = {tagName}
+		props = {tagName, svg}
 		styles = []
 		proxy = new Proxy (->),
 			get: (target, prop)->
@@ -28,7 +28,7 @@ export elementBuilder = (el𝑓)->
 			apply: (target, it, args)->
 				args.unshift styles
 				args.unshift props
-				props = {tagName}
+				props = {tagName, svg}
 				el𝑓.apply it, args
 		ProxyStyles.set proxy, styles
 		proxy

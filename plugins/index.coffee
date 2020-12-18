@@ -28,7 +28,7 @@ exportType = (node)->
 exports.workerInterface = ({matches})->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
-		unless code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__API__ \*\//
+		unless code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__API(_RAW)?__ \*\//
 			return
 		ast = this.parse code, sourceType: 'module'
 		exports = []

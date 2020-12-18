@@ -77,8 +77,8 @@ self.onmessage = async function({
     data: [event, ...args]
   }) {
   var callId, context, continuationId, e, exp, k, raw, rxId, v;
-  console.log(event, args);
   try {
+    // console.log event, args
     if (event === 'loadWorker') {
       return loadWorker(args[0]);
     } else if (event === 'callExport') {

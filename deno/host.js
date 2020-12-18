@@ -4,7 +4,8 @@ import {
 } from './api.js';
 
 import {
-  serveWorkers
+  serveWorkers,
+  serveApis
 } from './workers.js';
 
 import {
@@ -20,6 +21,11 @@ import Config from './config.js';
 serveWorkers({
   path: '.',
   matches: /_worker\.js$/
+});
+
+serveApis({
+  path: '.',
+  matches: /_api\.js$/
 });
 
 serveBundles({

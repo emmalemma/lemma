@@ -1,6 +1,4 @@
-export  stopEvent =(e)->
-	e.stopPropagation()
-
-export swallowEvent =(e)->
-	e.stopPropagation()
-	e.preventDefault()
+export preventDefault = (fn)->
+	(e)->
+		e.preventDefault()
+		fn e

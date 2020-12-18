@@ -45,7 +45,7 @@ processRpc = (callId, result)->
 	postMessage ['resolve', callId, result]
 
 self.onmessage = ({data: [event, args...]})->
-	console.log event, args
+	# console.log event, args
 	try
 		if event is 'loadWorker'
 			loadWorker args[0]

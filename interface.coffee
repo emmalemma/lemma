@@ -23,5 +23,5 @@ rpcResult =	(worker, result)->
 
 export workerInterface =
 	rpc: (worker, exportName)-> (args...)->
-		console.log 'calling RPC with', worker, exportName, args
+		# console.log 'calling RPC with', worker, exportName, args
 		rpcResult worker, await fetcher.post "/#{worker}/#{exportName}", body: args

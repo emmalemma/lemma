@@ -14,11 +14,25 @@ hostWorker = (target)->
 
 		try
 			result = await new Promise (resolve, reject)->
-				requests[rid] = {resolve, reject}
+				requests[rid] = {resolve, reject, context}
 		catch e
 			response.status = 500
 			result = e
 		response.json = result
+
+modules = {}
+hostApi = (target)->
+	Api.router.post "/#{target}/:exportName", (context)->
+		{request, response} = context
+		rid = request.serverRequest.conn.rid
+
+		try
+			response.json = raw: await modules[target][context.params.exportName].apply(context, await request.body().value)
+		catch e
+			response.status = 500
+			console.error 'API error', target
+			console.error e.stack
+			response.json = error: stack: e.stack, message: e.message
 
 Api.router.post "/workers/:target/continuation/:id", (context)->
 	{request, response} = context
@@ -51,8 +65,7 @@ Api.router.post "/workers/:target/reactive/:id", (context)->
 
 
 onWorkerMessage = ({data: [event, callId, result]})->
-	console.log [event, callId, result]
-
+	# console.log [event, callId, result]
 	if event is 'resolve'
 		requests[callId].resolve result
 	else if event is 'reject'
@@ -78,3 +91,16 @@ export serveWorkers = ({path, matches})->
 		harness.postMessage ['loadWorker', "file:///#{Deno.cwd()}/#{worker_file}"]
 		harness.onmessage = onWorkerMessage
 		harness.onerror = onWorkerError
+
+
+export serveApis = ({path, matches})->
+	worker_files = []
+	for await entry from Deno.readDir(path)
+		if entry.name.match matches
+			worker_files.push "#{path}/#{entry.name}"
+
+	for worker_file in worker_files
+		console.log 'loading worker', worker_file
+		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
+		hostApi target
+		module = modules[target]= await import("file:///#{Deno.cwd()}/#{worker_file}")

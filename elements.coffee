@@ -104,11 +104,16 @@ applyProps = (element, props)->
 			event = eventMatch[1]
 			element.addEventListener event, value
 		else
-			switch prop
-				when 'x' then null
-				when 'checked'
-					element[prop] = if value then true else false
-				else element[prop] = value
+			if element instanceof SVGElement
+				switch prop
+					when 'className' then element.setAttribute 'class', value
+					else element.setAttribute prop, value
+			else
+				switch prop
+					when 'x' then null
+					when 'checked'
+						element[prop] = if value then true else false
+					else element[prop] = value
 	for prop, value of element.cachedProps
 		unless prop of props
 			delete element[prop]
@@ -129,7 +134,10 @@ makeOrRetrieve = (keyProps)->
 		return cursor
 
 	else
-		element = document.createElement keyProps.tagName
+		if keyProps.svg
+			element = document.createElementNS "http://www.w3.org/2000/svg", keyProps.tagName
+		else
+			element = document.createElement keyProps.tagName
 		element.dataset.class = keyProps.class if keyProps.class
 		element._args = keyProps._args
 		element.rerender
@@ -187,6 +195,7 @@ _elements =  (keyProps, args...)->
 	return lastProperElement = element
 
 export elements = elementBuilder _elements
+export svgElements = elementBuilder _elements, svg: true
 
 export state = reactive
 
