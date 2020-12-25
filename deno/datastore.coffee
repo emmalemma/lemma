@@ -7,9 +7,20 @@ writeJson = (path, object)->
 	await Deno.writeTextFile path, JSON.stringify object, null, 2
 
 export class DataStore
-	constructor: (@path)->
+	constructor: (@path, {@indexes} = {})->
 		fs.ensureDir @path
 		fs.ensureDir "#{@path}/.backup"
+		@index = {}
+		@readIndex()
+
+	readIndex: ->
+		try
+			@index = (await readJson "#{@path}/.index") or {}
+		catch e
+			#
+
+	persistIndex: ->
+		await writeJson "#{@path}/.index", @index
 
 	readAll: (path)->
 		path ?= @path
@@ -51,4 +62,13 @@ export class DataStore
 			console.log 'existing json not found'
 
 		await writeJson jsonPath, object
+
+		indexed = false
+		for key, fn of @indexes
+			indexed = true
+			value = fn object
+			if value?
+				(index = @index[key] ?= {})[fn object] = id
+
+		@persistIndex() if indexed
 		# console.log 'wrote', object, 'to', jsonPath

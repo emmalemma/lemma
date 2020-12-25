@@ -106,8 +106,8 @@ self.onmessage = async function({
         ]);
       }
     } else if (event === 'continuation') {
-      [callId, continuationId, args] = args;
-      return processRpc(callId, (await continuations[continuationId].apply(identity, args)));
+      [callId, continuationId, args, context] = args;
+      return processRpc(callId, (await continuations[continuationId].apply(context, args)));
     } else if (event === 'reactive') {
       [callId, rxId, raw] = args;
       for (k in raw) {

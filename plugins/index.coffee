@@ -28,7 +28,7 @@ exportType = (node)->
 exports.workerInterface = ({matches})->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
-		unless code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__API(_RAW)?__ \*\//
+		unless code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__(API|WORKER)__ \*\//
 			return
 		ast = this.parse code, sourceType: 'module'
 		exports = []
@@ -47,8 +47,25 @@ exports.workerInterface = ({matches})->
 			#{exportInterfaces.join '\n\n'}
 			"""
 
+exports.serverImportMaps = ->
+	options = null
+	name: 'server-import-maps'
+	options: (opts)->
+		options = opts
+	resolveId: (source, importer)->
+		if source in options.input
+			return null
 
-exports.autoInput = ({dir, matches, exclude})->
+		if source.match /^lemma/
+			id: "../node_modules/#{source}.js"
+			external: true
+		else if source.match /^\.\//
+			id: "#{source}.coffee"
+			external: false
+		else null
+
+
+exports.autoInput = ({dir, matches, exclude, tagged})->
 	name: 'auto-input-plugin'
 	options: (options)->
 		options.input = []
@@ -57,7 +74,8 @@ exports.autoInput = ({dir, matches, exclude})->
 			if file.match(matches) and not file.match exclude
 				filePath = "#{dir}/#{file}"
 				file = await promisify (cb)-> fs.readFile filePath, 'utf8', cb
-				if file.match /^### @__PUBLISH__ ###/
+				# console.log 'testing tag', tagged
+				if file.match tagged
 					options.input.push filePath
 		console.log 'bundling', options.input
 		options

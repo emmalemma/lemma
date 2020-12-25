@@ -12,10 +12,27 @@ writeJson = async function(path, object) {
 };
 
 export var DataStore = class DataStore {
-  constructor(path1) {
+  constructor(path1, {indexes} = {}) {
     this.path = path1;
+    this.indexes = indexes;
     fs.ensureDir(this.path);
     fs.ensureDir(`${this.path}/.backup`);
+    this.index = {};
+    this.readIndex();
+  }
+
+  async readIndex() {
+    var e;
+    try {
+      return this.index = ((await readJson(`${this.path}/.index`))) || {};
+    } catch (error) {
+      e = error;
+    }
+  }
+
+  
+  async persistIndex() {
+    return (await writeJson(`${this.path}/.index`, this.index));
   }
 
   async readAll(path) {
@@ -69,7 +86,7 @@ export var DataStore = class DataStore {
   }
 
   async write(id, object) {
-    var e, jsonPath, stat;
+    var base1, e, fn, index, indexed, jsonPath, key, ref, stat, value;
     try {
       stat = (await Deno.stat(jsonPath = `${this.path}/${id}.json`));
       if (stat.isFile) {
@@ -79,7 +96,20 @@ export var DataStore = class DataStore {
       e = error;
       console.log('existing json not found');
     }
-    return (await writeJson(jsonPath, object));
+    await writeJson(jsonPath, object);
+    indexed = false;
+    ref = this.indexes;
+    for (key in ref) {
+      fn = ref[key];
+      indexed = true;
+      value = fn(object);
+      if (value != null) {
+        (index = (base1 = this.index)[key] != null ? base1[key] : base1[key] = {})[fn(object)] = id;
+      }
+    }
+    if (indexed) {
+      return this.persistIndex();
+    }
   }
 
 };

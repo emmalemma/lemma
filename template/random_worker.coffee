@@ -1,4 +1,4 @@
-### @__API__ ###
+### @__WORKER__ ###
 
 export random =->
 	console.log 'Server generated a random number: ', result = Math.random()

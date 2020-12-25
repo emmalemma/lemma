@@ -184,6 +184,10 @@ _elements =  (keyProps, args...)->
 
 	cursor = element.nextElementSibling
 
+	if 'body' of props
+		bodyFn = props.body
+		delete props.body
+		
 	applyProps element, props
 
 	if bodyFn

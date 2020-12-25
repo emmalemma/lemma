@@ -64,8 +64,8 @@ self.onmessage = ({data: [event, args...]})->
 				console.error e
 				postMessage ['reject', callId, {message: e.message}]
 		else if event is 'continuation'
-			[callId, continuationId, args] = args
-			processRpc callId, await continuations[continuationId].apply identity, args
+			[callId, continuationId, args, context] = args
+			processRpc callId, await continuations[continuationId].apply context, args
 		else if event is 'reactive'
 			[callId, rxId, raw] = args
 			reactives[rxId][k] = v for k, v of raw

@@ -4,8 +4,6 @@ import {stop, toRaw} from '@vue/reactivity'
 
 Records = new WeakMap
 
-dofer =(fn)->fn()
-
 idBuilder = (innerFn)->
 	id = null
 	proxy = new Proxy (->),
@@ -70,7 +68,7 @@ export persistence = (options)->
 
 		watchRecord record
 
-		record.loadedᴾ = dofer ->
+		record.loadedᴾ = do ->
 			try
 				out = await strategy.load id
 			catch e

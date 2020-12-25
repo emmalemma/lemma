@@ -14,10 +14,10 @@ import {terser} from 'rollup-plugin-terser';
 import 'coffeescript/register';
 import {workerInterface, autoInput} from 'lemma/plugins';
 
-export default {
+export default [{
   input: ['.'],// ['index.coffee', 'demo.coffee'],
   plugins: [
-      autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/}),
+      autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /^### @__PUBLISH__ ###/}),
       brotli(),
 
       coffeescript(),
@@ -57,4 +57,15 @@ export default {
 		format: 'es',
 		sourcemap: true
 	},
-}
+}, {
+    input: [],
+    plugins: [
+        autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /^### @__API__ ###/}),
+        coffeescript(),
+    ],
+    output: {
+        dir: './server'
+        format: 'es',
+        sourcemap: true
+    }
+}]

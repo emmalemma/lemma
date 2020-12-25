@@ -42,6 +42,8 @@ NotFound =(context, next)->
 			context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
 			context.response.body = "<script src='/not_found.js' type='module'></script>"
 
+abortController = null
+export Abort =-> abortController.abort()
 
 export Api =
 	app: new Oak.Application
@@ -81,12 +83,15 @@ export Api =
 		@app.use @router.allowedMethods()
 		@app.use hook for hook in @staticStack
 
+		abortController = new AbortController
+
 		@app.addEventListener 'error', (event)->
 			console.error "#{new Date()} Oak uncaught #{event.error.name}"
 			console.error event.error.stack
-			Deno.exit(5)
+			abortController.abort()
 
 		await @app.listen
+			signal: abortController.signal
 			port: Config.port or 9010
 			secure: true
 			certFile: Config.tls.certPath

@@ -21,15 +21,13 @@ persistent = persistence indexeddb:
 
 import {grid, gridArea, size} from './theme'
 
-dofer =(fn)->fn()
-
 import {watch} from 'lemma'
 import {getTheme, saveTheme} from './theme_worker'
 
 StyleEditor =->
 	styles = persistent.styles state {styleText: ""}
 
-	dofer ->
+	do ->
 		result = await getTheme()
 		styles.styleText = result if result
 		watch (->styles.styleText), ->
@@ -44,7 +42,7 @@ StyleEditor =->
 			console.debug styles.liveStyleText = document.styleSheets.asArray.flatMap((sheet)->sheet.cssRules.asArray.map (rule)->rule.cssText).sorted().join '\n'
 		watchHandle = setInterval doWatch, 1001 # 251
 
-	dofer ->
+	do ->
 		await persistence.record(styles).loadedᴾ
 		document.head.appendChild styleElement = elements.style ->
 			if @sheet

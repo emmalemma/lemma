@@ -19,12 +19,12 @@ import {
 import Config from './config.js';
 
 serveWorkers({
-  path: '.',
+  path: './server',
   matches: /_worker\.js$/
 });
 
 serveApis({
-  path: '.',
+  path: './server',
   matches: /_api\.js$/
 });
 
@@ -37,5 +37,7 @@ Api.serve('./public');
 (async function() {
   await loadConfig(`file:///${Deno.cwd()}/.config/server.js`);
   console.log('Listening on', Config.port);
-  return Api.host();
+  await Api.host();
+  console.log('Listen server exited.');
+  return Deno.exit(1);
 })();
