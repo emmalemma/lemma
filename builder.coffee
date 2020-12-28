@@ -2,11 +2,11 @@
 # converts
 #  `tag.class.[Symbol(key)].$for(iterArg) args...`
 # into
-#  `el𝑓 {tagName: 'tag', class: 'class', _key: Symbol(key), _args: [iterArg]}, args...`
+#  `elf {tagName: 'tag', class: 'class', _key: Symbol(key), _args: [iterArg]}, args...`
 
 ProxyStyles = new WeakMap
 
-export elementBuilder = (el𝑓, {svg} = {svg: false})->
+export elementBuilder = (elf, {svg} = {svg: false})->
 	chainer = (tagName)->
 		props = {tagName, svg}
 		styles = []
@@ -29,7 +29,7 @@ export elementBuilder = (el𝑓, {svg} = {svg: false})->
 				args.unshift styles
 				args.unshift props
 				props = {tagName, svg}
-				el𝑓.apply it, args
+				elf.apply it, args
 		ProxyStyles.set proxy, styles
 		proxy
 

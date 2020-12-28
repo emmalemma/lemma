@@ -28,7 +28,7 @@ exportType = (node)->
 exports.workerInterface = ({matches})->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
-		unless code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__(API|WORKER)__ \*\//
+		unless (code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__(API|WORKER)__ \*\//) or code.match /this\.expose\.(API|WORKER)/
 			return
 		ast = this.parse code, sourceType: 'module'
 		exports = []
@@ -49,6 +49,9 @@ exports.workerInterface = ({matches})->
 
 exports.serverImportMaps = ->
 	options = null
+	map =
+		'@vue/reactivity': 'https://esm.sh/@vue/reactivity@3.0.4'
+
 	name: 'server-import-maps'
 	options: (opts)->
 		options = opts
@@ -56,14 +59,37 @@ exports.serverImportMaps = ->
 		if source in options.input
 			return null
 
-		if source.match /^lemma/
+		if source.match /^lemma\/deno/
 			id: "../node_modules/#{source}.js"
 			external: true
-		else if source.match /^\.\//
-			id: "#{source}.coffee"
+		else if source.match /^lemma/
+			id: "./node_modules/#{source}.coffee"
 			external: false
+		else if source.match /^\.\//
+			[path..., file] = importer.split /[\\\/]/
+			id: "#{path.join '/'}/#{source}.coffee"
+			external: false
+		else if source of map
+			id: map[source]
+			external: true
 		else null
 
+exports.stripDecorators = ->
+	name: 'strip-decorators-plugin'
+	transform: (code, id)->
+		return unless code.match /this\.expose\./
+		# console.log transforming: code[0..100]
+		ast = this.parse code, sourceType: 'module'
+		next = false
+		for node in ast.body
+			if node.type is 'ExpressionStatement' and node.expression.property?.name in ['CLIENT', 'API', 'WORKER']
+				# console.log node
+				next = true
+			else if next
+				next = false
+				# console.log 'next', node
+
+		map: {mappings: ''}, code: code.replace /this\.expose\.(API|CLIENT|WORKER)/g, ''
 
 exports.autoInput = ({dir, matches, exclude, tagged})->
 	name: 'auto-input-plugin'

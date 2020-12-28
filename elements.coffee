@@ -1,5 +1,5 @@
 import {effect, stop, reactive} from '@vue/reactivity'
-import {elementBuilder} from './builder.coffee'
+import {elementBuilder} from './builder'
 
 # Stack variables
 parentElement = null
@@ -23,7 +23,7 @@ checkRenders = (target)->
 		# console.log 'clearing child render for', target
 
 
-schedule𝑓 = (effect)->
+schedulef = (effect)->
 	effect.element.needsRerender = true
 	# effect.element.dataset.needsRerender = true
 	parentEffect = effect
@@ -47,7 +47,7 @@ schedule𝑓 = (effect)->
 effectCatcher = (element, effectFn)->
 	_activeEffect = activeEffect
 	element.effect = activeEffect = effect effectFn,
-		scheduler: schedule𝑓
+		scheduler: schedulef
 		lazy: true
 		# onTrack: (args...)->console.log element, 'track', args
 		# onTrigger: (args...)->console.log element, 'trigger', args
@@ -187,7 +187,7 @@ _elements =  (keyProps, args...)->
 	if 'body' of props
 		bodyFn = props.body
 		delete props.body
-		
+
 	applyProps element, props
 
 	if bodyFn
@@ -209,4 +209,4 @@ export cleanup =(cb)->
 	parentElement.cleanups.push cb
 
 export rerender =(element)->
-	schedule𝑓 element.effect if element.effect
+	schedulef element.effect if element.effect
