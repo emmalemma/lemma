@@ -12,7 +12,9 @@ rollup = runRollup()
 Api.serve './public'
 
 do ->
-	await loadConfig "file:///#{Deno.cwd()}/.config/server.js"
+	for arg in Deno.args
+		if m = arg.match /--config=(.+)/
+			await loadConfig "file:///#{Deno.cwd()}/#{m[1]}"
 
 	console.log 'Listening on', Config.port
 	await Api.host()

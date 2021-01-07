@@ -2,7 +2,7 @@ module = {}
 
 import {isReactive, toRaw} from 'https://esm.sh/@vue/reactivity@3.0.4'
 
-loadWorker = (filename)->
+loadModule = (filename)->
 	try
 		module = await import(filename)
 		# console.log 'loaded module', module
@@ -45,16 +45,23 @@ processRpc = (callId, result)->
 	postMessage ['resolve', callId, result]
 
 self.onmessage = ({data: [event, args...]})->
-	# console.log event, args
 	try
-		if event is 'loadWorker'
-			loadWorker args[0]
+		if event is 'loadModule'
+			[callId, uri] = args
+			try
+				await loadModule uri
+				postMessage ['resolve', callId]
+			catch e
+				postMessage ['reject', callId, e.message]
+
 		else if event is 'callExport'
 			[callId, exp, args, context] = args
 			try
 				if typeof module[exp] is 'function'
 					unless Array.isArray args
 						args = [args]
+					context.requireAdmin =->
+						throw new Error 'unauthorized' unless @identity.admin
 					processRpc callId, await module[exp].apply context, args
 				else
 					# if typeof args is 'object'

@@ -1,8 +1,10 @@
 harnesses = {}
 requests = {}
-import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 
+import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 import {Api} from './api.js'
+
+delay = (ms)->new Promise (res)-> setTimeout res, ms
 
 hostWorker = (target)->
 	Api.router.post "/#{target}/:exportName", (context)->
@@ -100,13 +102,14 @@ Api.router.post "/workers/:target/reactive/:id", (context)->
 		result = e
 	response.json = result
 
-
 onWorkerMessage = ({data: [event, callId, result]})->
 	# console.log [event, callId, result]
-	if event is 'resolve'
-		requests[callId].resolve result
-	else if event is 'reject'
-		requests[callId].reject result
+	switch event
+		when 'resolve'
+			requests[callId].resolve result
+		when 'reject'
+			requests[callId].reject result
+
 	delete requests[callId]
 
 onWorkerError = (error)->
@@ -114,56 +117,78 @@ onWorkerError = (error)->
 	console.error error
 	error.preventDefault()
 
+loadWorker = (target, uri)->
+	previous = harnesses[target]
+	harness = harnesses[target] = new Worker new URL('harness.js', `import.meta.url`).href, type: 'module', deno: true
+	callId = "worker-#{target}"
+	harness.postMessage ['loadModule', callId, uri]
+	harness.onmessage = onWorkerMessage
+	harness.onerror = onWorkerError
+
+	loaded = new Promise (resolve, reject)->
+		requests[callId] = {resolve, reject}
+
+	if previous
+		previous.postMessage ['teardown', callId]
+		state = await new Promise (resolve, reject)->
+			requests[callId] = {resolve, reject}
+
+		await loaded
+		harness.postMessage ['upgrade', state]
+	else loaded
+
+loadModule = (target, uri)->
+	previous = modules[target]
+	try
+		module = modules[target] = await import("#{uri}?#{Date.now()}")
+		console.log 'new module loaded'
+		module._upgrade? previous if previous
+	catch e
+		console.error 'hot reload failed'
+		console.error e
+
+watchTarget = (target, path, reload)->
+	uri = "file:///#{Deno.cwd()}/#{path}"
+	console.log watch: {target, path, uri}
+
+	reload target, uri
+	debounce = null
+
+	for await event from Deno.watchFs path
+		console.log {event}
+		if event.kind is 'modify'
+			debounce ?= do ->
+				await reload target, uri
+				await delay 100
+				debounce = null
+
 export serveWorkers = ({path, matches})->
 	worker_files = []
-	for await entry from Deno.readDir(path)
-		if entry.name.match matches
-			worker_files.push "#{path}/#{entry.name}"
+	try
+		for await entry from Deno.readDir(path)
+			console.log 'loading ', entry
+			if entry.name.match matches
+				worker_files.push "#{path}/#{entry.name}"
+	catch e
+		console.error "Can't read apis: #{path}"
 
 	for worker_file in worker_files
 		console.log 'loading worker', worker_file
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
 		hostWorker target
-		harness = harnesses[target] = new Worker new URL('harness.js', `import.meta.url`).href, type: 'module', deno: true
-		harness.postMessage ['loadWorker', "file:///#{Deno.cwd()}/#{worker_file}"]
-		harness.onmessage = onWorkerMessage
-		harness.onerror = onWorkerError
-
-
-watchModule = (target, path, uri)->
-	console.log watch: {target, path, uri}
-	debounce = null
-	for await event from Deno.watchFs path
-		console.log {event}
-		if event.kind is 'modify'
-			debounce ?= setTimeout (->
-				debounce = null
-				previous = modules[target]
-				try
-					module = modules[target] = await import("#{uri}?#{Date.now()}")
-					console.log 'new module loaded'
-					module._upgrade? previous
-				catch e
-					console.error 'hot reload failed'
-					console.error e
-				), 100
+		watchTarget target, worker_file, loadWorker
 
 export serveApis = ({path, matches})->
 	worker_files = []
-	for await entry from Deno.readDir(path)
-		if entry.name.match matches
-			worker_files.push "#{path}/#{entry.name}"
+	try
+		for await entry from Deno.readDir(path)
+			console.log 'loading ', entry
+			if entry.name.match /\.js$/
+				worker_files.push "#{path}/#{entry.name}"
+	catch e
+		console.error "Can't read apis: #{path}"
 
 	for worker_file in worker_files
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
-		worker_path = "#{worker_file}"
 		hostApi target
-		uri = "file:///#{Deno.cwd()}/#{worker_path}"
-		# console.log {target, worker_file, worker_path, uri}
-		try
-			module = modules[target] = await import("#{uri}?#{Date.now()}")
-		catch e
-			console.error 'api load failed'
-			console.error e
-			modules[target] = {error: e}
-		watchModule target, "#{worker_path}", uri
+		watchTarget target, worker_file, loadModule

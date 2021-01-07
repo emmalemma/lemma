@@ -28,7 +28,7 @@ exportType = (node)->
 exports.workerInterface = ({matches})->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
-		unless (code.match /^(\/\/ ([^\n])+[\r\n]+\s*)?\/\* @__(API|WORKER)__ \*\//) or code.match /this\.expose\.(API|WORKER)/
+		unless (code.match /expose\/api/) or code.match /this\.expose\.(API|WORKER)/
 			return
 		ast = this.parse code, sourceType: 'module'
 		exports = []
@@ -56,6 +56,7 @@ exports.serverImportMaps = ->
 	options: (opts)->
 		options = opts
 	resolveId: (source, importer)->
+		console.log 'resolving', {source, importer}
 		if source in options.input
 			return null
 
@@ -69,6 +70,9 @@ exports.serverImportMaps = ->
 			[path..., file] = importer.split /[\\\/]/
 			id: "#{path.join '/'}/#{source}.coffee"
 			external: false
+		else if source.match /^https:/
+			id: source
+			external: true
 		else if source of map
 			id: map[source]
 			external: true
@@ -77,7 +81,7 @@ exports.serverImportMaps = ->
 exports.stripDecorators = ->
 	name: 'strip-decorators-plugin'
 	transform: (code, id)->
-		return unless code.match /this\.expose\./
+		return unless code.match /this\.expose\.|@lemmata\/expose/
 		# console.log transforming: code[0..100]
 		ast = this.parse code, sourceType: 'module'
 		next = false
@@ -89,7 +93,7 @@ exports.stripDecorators = ->
 				next = false
 				# console.log 'next', node
 
-		map: {mappings: ''}, code: code.replace /this\.expose\.(API|CLIENT|WORKER)/g, ''
+		map: {mappings: ''}, code: code.replace /this\.expose\.(API|CLIENT|WORKER)|import '@lemmata\/expose\/\w+'/g, ''
 
 exports.autoInput = ({dir, matches, exclude, tagged})->
 	name: 'auto-input-plugin'

@@ -40,7 +40,14 @@ rollup = runRollup();
 Api.serve('./public');
 
 (async function() {
-  await loadConfig(`file:///${Deno.cwd()}/.config/server.js`);
+  var arg, i, len, m, ref;
+  ref = Deno.args;
+  for (i = 0, len = ref.length; i < len; i++) {
+    arg = ref[i];
+    if (m = arg.match(/--config=(.+)/)) {
+      await loadConfig(`file:///${Deno.cwd()}/${m[1]}`);
+    }
+  }
   console.log('Listening on', Config.port);
   await Api.host();
   console.log('Listen server exited.');

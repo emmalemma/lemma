@@ -5,6 +5,14 @@ import {DataStore} from './datastore.js'
 import {AuthIdentity} from './auth.js'
 import Config from './config.js'
 
+AllowedHostnames = (context, next)->
+	unless context.request.url.hostname in Config.allowedHosts
+		context.respond = false
+		console.log 'Ignoring request to ', context.request.url.hostname
+		context.request.serverRequest.conn.close()
+	else
+		await next()
+
 JsonResponse = (context, next)->
 	await next()
 	if 'json' of context.response
@@ -74,6 +82,8 @@ export Api =
 	host: (port)->
 		@app.addEventListener 'error', (event)->
 			console.error event.error
+		if Config.allowedHosts
+			@app.use AllowedHostnames
 		@app.use RequestLogging
 		@app.use NotFound
 		@app.use JsonResponse
@@ -90,9 +100,17 @@ export Api =
 			console.error event.error.stack
 			abortController.abort()
 
-		await @app.listen
+		certs =
+			if Config.tls
+				certFile: Config.tls.certPath
+				keyFile: Config.tls.keyPath
+				secure: true
+			else secure: false
+
+
+		options = Object.assign
 			signal: abortController.signal
 			port: Config.port or 9010
 			secure: true
-			certFile: Config.tls.certPath
-			keyFile: Config.tls.keyPath
+			certs
+		await @app.listen options

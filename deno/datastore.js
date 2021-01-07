@@ -22,15 +22,20 @@ export var DataStore = class DataStore {
   }
 
   async readIndex() {
-    var e;
+    var base1, e, k, results;
     try {
-      return this.index = ((await readJson(`${this.path}/.index`))) || {};
+      this.index = ((await readJson(`${this.path}/.index`))) || {};
     } catch (error) {
       e = error;
+      console.log('Index read error', e);
     }
+    results = [];
+    for (k in this.indexes) {
+      results.push((base1 = this.index)[k] != null ? base1[k] : base1[k] = {});
+    }
+    return results;
   }
 
-  
   async persistIndex() {
     return (await writeJson(`${this.path}/.index`, this.index));
   }

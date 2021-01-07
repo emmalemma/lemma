@@ -1,4 +1,4 @@
-import {effect, stop, reactive} from '@vue/reactivity'
+import {effect, stop, reactive, computed} from '@vue/reactivity'
 import {elementBuilder} from './builder'
 
 # Stack variables
@@ -202,6 +202,7 @@ export elements = elementBuilder _elements
 export svgElements = elementBuilder _elements, svg: true
 
 export state = reactive
+state.computed = computed
 
 export cleanup =(cb)->
 	console.log

@@ -36,13 +36,15 @@ makeToken = async function(payload) {
 };
 
 export var assignId = async function(context, id) {
-  var payload, token;
+  var iat, payload, token;
   token = (await makeToken(payload = {
-    guid: id
+    sub: id,
+    iat: iat = Math.floor(Date.now() / 1000),
+    exp: iat + 30 * 24 * 60 * 60
   }));
   return context.cookies.set('Identity', token, {
     domain: context.request.url.hostname,
-    // expires: new Date payload.exp * 1000
+    expires: new Date(payload.exp * 1000),
     httpOnly: true,
     overwrite: true,
     secure: true,
@@ -61,8 +63,8 @@ export var saveId = function(identity) {
 };
 
 export var authenticateUser = async function(username, password) {
-  var id, identity;
-  id = idStore.index.username[username];
+  var id, identity, ref;
+  id = (ref = idStore.index.username) != null ? ref[username] : void 0;
   if (!id) {
     throw new Error('no such user');
   }
@@ -73,6 +75,21 @@ export var authenticateUser = async function(username, password) {
   return identity;
 };
 
+export var registerUser = async function(username, password) {
+  if (!(username && password)) {
+    throw new Error('username and password must exist');
+  }
+  if (idStore.index.username[username]) {
+    throw new Error('username is already registered');
+  }
+  if (this.identity.username && this.identity.password) {
+    throw new Error('user record has a username already');
+  }
+  this.identity.username = username;
+  this.identity.password = (await bcrypt.hash(password));
+  return (await saveId(this.identity));
+};
+
 export var AuthIdentity = async function(context, next) {
   var name, payload, token;
   token = context.cookies.get('Identity');
@@ -81,12 +98,19 @@ export var AuthIdentity = async function(context, next) {
   }
   if (!payload) {
     payload = {
-      guid: uuid.v4.generate()
+      sub: uuid.v4.generate()
     };
-    assignId(context, payload.guid);
+    assignId(context, payload.sub);
+  } else {
+    if (payload.guid) {
+      payload.sub = payload.guid;
+    }
+    if (!payload.iat || payload.iat < (Date.now() / 1000) - 30 * 60 * 60) {
+      assignId(context, payload.sub);
+    }
   }
-  context.identity = identities[name = payload.guid] != null ? identities[name] : identities[name] = ((await idStore.read(payload.guid))) || {
-    guid: payload.guid
+  context.identity = identities[name = payload.sub] != null ? identities[name] : identities[name] = ((await idStore.read(payload.sub))) || {
+    guid: payload.sub
   };
   context.requireAdmin = function() {
     if (!context.identity.admin) {
