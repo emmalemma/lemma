@@ -1,3 +1,3 @@
-# This is a Lemma template project.
+# Lemma Template Project
 
-# To configure:
+> template files for a basic lemma app

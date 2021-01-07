@@ -1,4 +1,4 @@
-fs = require 'fs'
+import fs from 'fs'
 
 promisify = (caller)->
 	new Promise (res, rej)->
@@ -25,7 +25,7 @@ exportType = (node)->
 	# 				return 'reactive'
 	'rpc'
 
-exports.workerInterface = ({matches})->
+export workerInterface = ({matches})->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
 		unless (code.match /expose\/api/) or code.match /this\.expose\.(API|WORKER)/
@@ -42,12 +42,12 @@ exports.workerInterface = ({matches})->
 			"""export #{if exp.name is 'default' then 'default ' else "const #{exp.name} = "} workerInterface.#{exp.type}("#{target}", '#{exp.name}');"""
 
 		return map: {mappings: ''}, code: """
-			import {workerInterface} from 'lemma';
+			import {workerInterface} from '@lemmata/client';
 
 			#{exportInterfaces.join '\n\n'}
 			"""
 
-exports.serverImportMaps = ->
+export serverImportMaps = ->
 	options = null
 	map =
 		'@vue/reactivity': 'https://esm.sh/@vue/reactivity@3.0.4'
@@ -56,7 +56,6 @@ exports.serverImportMaps = ->
 	options: (opts)->
 		options = opts
 	resolveId: (source, importer)->
-		console.log 'resolving', {source, importer}
 		if source in options.input
 			return null
 
@@ -78,7 +77,7 @@ exports.serverImportMaps = ->
 			external: true
 		else null
 
-exports.stripDecorators = ->
+export stripDecorators = ->
 	name: 'strip-decorators-plugin'
 	transform: (code, id)->
 		return unless code.match /this\.expose\.|@lemmata\/expose/
@@ -95,7 +94,7 @@ exports.stripDecorators = ->
 
 		map: {mappings: ''}, code: code.replace /this\.expose\.(API|CLIENT|WORKER)|import '@lemmata\/expose\/\w+'/g, ''
 
-exports.autoInput = ({dir, matches, exclude, tagged})->
+export autoInput = ({dir, matches, exclude, tagged})->
 	name: 'auto-input-plugin'
 	options: (options)->
 		options.input = []
@@ -104,7 +103,6 @@ exports.autoInput = ({dir, matches, exclude, tagged})->
 			if file.match(matches) and not file.match exclude
 				filePath = "#{dir}/#{file}"
 				file = await promisify (cb)-> fs.readFile filePath, 'utf8', cb
-				# console.log 'testing tag', tagged
 				if file.match tagged
 					options.input.push filePath
 		console.log 'bundling', options.input

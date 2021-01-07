@@ -4,11 +4,12 @@ import {DataStore} from './datastore.js'
 
 import {AuthIdentity} from './auth.js'
 import Config from './config.js'
+import {log} from './log.js'
 
 AllowedHostnames = (context, next)->
 	unless context.request.url.hostname in Config.allowedHosts
 		context.respond = false
-		console.log 'Ignoring request to ', context.request.url.hostname
+		log 'Ignoring request to ', context.request.url.hostname
 		context.request.serverRequest.conn.close()
 	else
 		await next()
@@ -17,7 +18,7 @@ JsonResponse = (context, next)->
 	await next()
 	if 'json' of context.response
 		if context.response.body
-			console.error json: context.response.json
+			log.error json: context.response.json
 			throw new Error "Set JSON as well as raw body!"
 		context.response.headers.set 'Content-Type', 'application/json'
 		context.response.body = JSON.stringify context.response.json, null, 2
@@ -26,26 +27,26 @@ HtmlResponse = (context, next)->
 	await next()
 	if 'html' of context.response
 		if context.response.body
-			console.error html: context.response.html
+			log.error html: context.response.html
 			throw new Error "Set HTML as well as raw body!"
 		context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
 		context.response.body = context.response.html
 
 RequestLogging = ({request, response}, next)->
-		console.log request.method, request.url.href
+		log request.method, request.url.href
 		try
 			await next()
 		catch e
-			console.error "LOG", e.stack
+			log.error "LOG", e.stack
 			response.status = e.status or 500
 		finally
-			console.log request.method, request.url.href, response.status
+			log request.method, request.url.href, response.status
 
 NotFound =(context, next)->
 	try
 		await next()
 	catch e
-		console.log 'notfound error', e
+		log 'notfound error', e
 		if context.response.status is 404
 			context.response.headers.set 'Content-Type', 'text/html; charset=utf-8'
 			context.response.body = "<script src='/not_found.js' type='module'></script>"
@@ -81,7 +82,7 @@ export Api =
 
 	host: (port)->
 		@app.addEventListener 'error', (event)->
-			console.error event.error
+			log.error event.error
 		if Config.allowedHosts
 			@app.use AllowedHostnames
 		@app.use RequestLogging
@@ -96,8 +97,8 @@ export Api =
 		abortController = new AbortController
 
 		@app.addEventListener 'error', (event)->
-			console.error "#{new Date()} Oak uncaught #{event.error.name}"
-			console.error event.error.stack
+			log.error "#{new Date()} Oak uncaught #{event.error.name}"
+			log.error event.error.stack
 			abortController.abort()
 
 		certs =

@@ -1,0 +1,40 @@
+{
+  "name": "@lemmata/bundler",
+  "version": "0.0.1-a1",
+  "description": "builds lemma source code into client and server bundles",
+  "main": "generated/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "coffee --no-header -bc -o generated .",
+    "watch": "coffee --no-header -bcw -o generated ."
+  },
+  "bin": {
+    "lemma-bundle": "./generated/cli.js"
+  },
+  "dependencies": {
+    "core-js": "^3.6.5",
+    "rollup": "^2.35.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.4",
+    "@babel/preset-env": "^7.11.0",
+    "@rollup/plugin-babel": "^5.2.0",
+    "@rollup/plugin-commonjs": "^15.1.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^9.0.0",
+    "@rollup/plugin-html": "^0.2.0",
+    "coffeescript": "^2.5.1",
+    "core-js": "^3.6.5",
+    "rollup-plugin-analyzer": "^3.3.0",
+    "rollup-plugin-brotli": "^3.0.1",
+    "rollup-plugin-coffee-script": "^2.0.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-inject-process-env": "^1.3.0",
+    "rollup-plugin-node-polyfills": "^0.2.1",
+    "rollup-plugin-terser": "^7.0.2"
+  },
+  "author": "emma",
+  "license": "ISC"
+}

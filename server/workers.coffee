@@ -3,6 +3,7 @@ requests = {}
 
 import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 import {Api} from './api.js'
+import {log} from './log.js'
 
 delay = (ms)->new Promise (res)-> setTimeout res, ms
 
@@ -11,7 +12,7 @@ hostWorker = (target)->
 		{request, response} = context
 		rid = request.serverRequest.conn.rid
 
-		# console.log context.params, harnesses
+		# log context.params, harnesses
 		harnesses[target].postMessage ['callExport', rid, context.params.exportName, await request.body().value, {identity: context.identity, headers: context.request.headers}]
 
 		try
@@ -29,7 +30,7 @@ class SocketProxy
 		do ->
 			for await message from socket
 				unless typeof message is 'string'
-					console.error {error: message}
+					log.error {error: message}
 					continue
 				data = JSON.parse message
 				handlers[data.target]?.apply null, data.args
@@ -69,8 +70,8 @@ hostApi = (target)->
 
 		catch e
 			response.status = 500
-			console.error 'API error', target
-			console.error e.stack
+			log.error 'API error', target
+			log.error e.stack
 			response.json = error: stack: e.stack, message: e.message
 
 Api.router.post "/workers/:target/continuation/:id", (context)->
@@ -91,7 +92,7 @@ Api.router.post "/workers/:target/reactive/:id", (context)->
 	{request, response} = context
 	rid = request.serverRequest.conn.rid
 
-	# console.log context.params, harnesses
+	# log context.params, harnesses
 	harnesses[context.params.target].postMessage ['reactive', rid, context.params.id, await request.body().value, context.identity]
 
 	try
@@ -103,7 +104,7 @@ Api.router.post "/workers/:target/reactive/:id", (context)->
 	response.json = result
 
 onWorkerMessage = ({data: [event, callId, result]})->
-	# console.log [event, callId, result]
+	# log [event, callId, result]
 	switch event
 		when 'resolve'
 			requests[callId].resolve result
@@ -113,8 +114,8 @@ onWorkerMessage = ({data: [event, callId, result]})->
 	delete requests[callId]
 
 onWorkerError = (error)->
-	console.error 'worker error'
-	console.error error
+	log.error 'worker error'
+	log.error error
 	error.preventDefault()
 
 loadWorker = (target, uri)->
@@ -141,21 +142,21 @@ loadModule = (target, uri)->
 	previous = modules[target]
 	try
 		module = modules[target] = await import("#{uri}?#{Date.now()}")
-		console.log 'new module loaded'
+		log 'new module loaded'
 		module._upgrade? previous if previous
 	catch e
-		console.error 'hot reload failed'
-		console.error e
+		log.error 'hot reload failed'
+		log.error e
 
 watchTarget = (target, path, reload)->
 	uri = "file:///#{Deno.cwd()}/#{path}"
-	console.log watch: {target, path, uri}
+	log watch: {target, path, uri}
 
 	reload target, uri
 	debounce = null
 
 	for await event from Deno.watchFs path
-		console.log {event}
+		log {event}
 		if event.kind is 'modify'
 			debounce ?= do ->
 				await reload target, uri
@@ -166,14 +167,14 @@ export serveWorkers = ({path, matches})->
 	worker_files = []
 	try
 		for await entry from Deno.readDir(path)
-			console.log 'loading ', entry
+			log 'loading ', entry
 			if entry.name.match matches
 				worker_files.push "#{path}/#{entry.name}"
 	catch e
-		console.error "Can't read apis: #{path}"
+		log.error "Can't read apis: #{path}"
 
 	for worker_file in worker_files
-		console.log 'loading worker', worker_file
+		log 'loading worker', worker_file
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]
 		hostWorker target
 		watchTarget target, worker_file, loadWorker
@@ -182,11 +183,10 @@ export serveApis = ({path, matches})->
 	worker_files = []
 	try
 		for await entry from Deno.readDir(path)
-			console.log 'loading ', entry
 			if entry.name.match /\.js$/
 				worker_files.push "#{path}/#{entry.name}"
 	catch e
-		console.error "Can't read apis: #{path}"
+		log.error "Can't read apis: #{path}"
 
 	for worker_file in worker_files
 		target = worker_file.match(/([^\/\\]+)\.[a-z]+$/)[1]

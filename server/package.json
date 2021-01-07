@@ -1,0 +1,15 @@
+{
+  "name": "@lemmata/server",
+  "version": "0.0.1-a1",
+  "description": "deno code repository for lemma API server",
+  "main": "server.js",
+  "scripts": {
+    "build": "coffee -c -o generated .",
+    "watch": "coffee -cw -o generated ."
+  },
+  "author": "emma",
+  "license": "ISC",
+  "devDependencies": {
+    "coffeescript": "^2.5.1"
+  }
+}

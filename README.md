@@ -1,9 +1,8 @@
 ### **lemma**
 
- | A lemma is a smaller, proven result which is used in the proof of a more consequential theorem.
+ | A lemma is a small, formally proven result which is used in the proof of a more consequential theorem.
 
-Lemma is a full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. The philosophy of Lemma is to do as much as possible in terms of apparent semantics, while doing as little as possible in terms of library code.
-
+Lemma is a full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. The philosophy of Lemma is to do as much as possible, while doing as little as possible.
 
 A simple to-do app in its entirety:
 

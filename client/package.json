@@ -1,7 +1,7 @@
 {
-  "name": "lemma",
-  "version": "0.0.1",
-  "description": "a smaller result used to prove a theorem",
+  "name": "@lemmata/client",
+  "version": "0.0.1-a1",
+  "description": "lemma frontend library for rapid UI development",
   "main": "index.coffee",
   "module": "index.coffee",
   "type": "module",
