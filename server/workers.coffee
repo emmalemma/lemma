@@ -4,6 +4,10 @@ requests = {}
 import {reactive} from 'https://esm.sh/@vue/reactivity@3.0.4'
 import {Api} from './api.js'
 import {log} from './log.js'
+import {
+  isWebSocketCloseEvent,
+  isWebSocketPingEvent,
+} from "https://deno.land/std@0.82.0/ws/mod.ts";
 
 delay = (ms)->new Promise (res)-> setTimeout res, ms
 
@@ -28,16 +32,29 @@ class SocketProxy
 	connect: (socket)->
 		handlers = {}
 		do ->
-			for await message from socket
-				unless typeof message is 'string'
-					log.error {error: message}
-					continue
-				data = JSON.parse message
-				handlers[data.target]?.apply null, data.args
+			try
+				for await message from socket
+					if typeof message is 'string'
+						data = JSON.parse message
+						handlers[data.target]?.apply null, data.args
+					else if isWebSocketCloseEvent(message)
+						handlers.onclose?()
+					else
+						log.error {error: message}
+			catch e
+				log.error 'Socket recv error'
+				log.error e
+				handlers.onclose?()
 		@setup new Proxy {},
 			get: (_, target)->
 				(args...)->
-					socket.send JSON.stringify {target, args}
+					# log {sending: {target, args}, socket}
+					try
+						socket.send JSON.stringify {target, args}
+					catch e
+						log.error 'socket send error'
+						log.error e
+						handlers.onclose?()
 			set: (target, prop, value)->
 				handlers[prop] = value
 
@@ -46,14 +63,16 @@ export realtime = (setup)->
 
 sockets = {}
 hostSocket = (target, exportName)->
-	sockets["#{target}:#{exportName}"] ?= Api.router.get "/#{target}/#{exportName}" , (context)->
+	targetUri = target.replace /__slash__/g, '/'
+	sockets["#{target}:#{exportName}"] ?= Api.router.get "/#{targetUri}/#{exportName}" , (context)->
 		if context.isUpgradable
-			proxy = modules[target][exportName].apply(context, await context.request.body().value)
+			proxy = await modules[target][exportName].apply(context, await context.request.body().value)
 			proxy.connect await context.upgrade()
 
 modules = {}
 hostApi = (target)->
-	Api.router.post "/#{target}/:exportName", (context)->
+	targetUri = target.replace /__slash__/g, '/'
+	Api.router.post "/#{targetUri}/:exportName", (context)->
 		{request, response} = context
 		rid = request.serverRequest.conn.rid
 
@@ -64,7 +83,8 @@ hostApi = (target)->
 			result = await modules[target][context.params.exportName].apply(context, await request.body().value)
 			if result instanceof SocketProxy
 				hostSocket target, context.params.exportName
-				response.json = socket: request.url.href.replace /https/, 'wss'
+
+				response.json = socket: request.url.href.replace(/https/, 'wss')
 			else
 				response.json = raw: result
 
@@ -141,22 +161,20 @@ loadWorker = (target, uri)->
 loadModule = (target, uri)->
 	previous = modules[target]
 	try
-		module = modules[target] = await import("#{uri}?#{Date.now()}")
-		log 'new module loaded'
+		module = await import("#{uri}?#{Date.now()}")
+		modules[target] = module
+		log 'loaded module', target
 		module._upgrade? previous if previous
 	catch e
-		log.error 'hot reload failed'
+		log.error 'hot reload failed on', target
 		log.error e
 
 watchTarget = (target, path, reload)->
 	uri = "file:///#{Deno.cwd()}/#{path}"
-	log watch: {target, path, uri}
-
 	reload target, uri
 	debounce = null
 
 	for await event from Deno.watchFs path
-		log {event}
 		if event.kind is 'modify'
 			debounce ?= do ->
 				await reload target, uri
@@ -167,7 +185,6 @@ export serveWorkers = ({path, matches})->
 	worker_files = []
 	try
 		for await entry from Deno.readDir(path)
-			log 'loading ', entry
 			if entry.name.match matches
 				worker_files.push "#{path}/#{entry.name}"
 	catch e

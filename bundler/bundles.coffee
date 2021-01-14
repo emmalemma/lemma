@@ -9,15 +9,18 @@ import analyzer from 'rollup-plugin-analyzer'
 # // import html from '@rollup/plugin-html'
 import brotli from 'rollup-plugin-brotli'
 import {terser} from 'rollup-plugin-terser'
-import {workerInterface, autoInput, serverImportMaps, stripDecorators} from './plugins.js'
+import {workerInterface, autoInput, serverImportMaps, stripDecorators, outputTree} from './plugins.js'
 
 export server =
 	input: []
 	plugins: [
-			autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /^@expose.(API|WORKER)|@lemmata\/expose\/api/}),
+			autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /@lemmata\/expose\/(api|worker)/}),
 			coffeescript(),
 			serverImportMaps(),
+			resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
+			commonJs(),
 			stripDecorators(),
+			outputTree()
 	],
 	output:
 			dir: if process.env.ROLLUP_DEPLOY then './deploy/server' else './generated/server',
@@ -30,13 +33,13 @@ __dirname = `import.meta.url`.split('/')[2..-2].join('/').replace /^\/?C:/, ''
 export client =
 	input: ['.'],
 	plugins: [
-			autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /^@expose.CLIENT|@lemmata\/expose\/client/}),
+			autoInput({dir: '.', matches: /\.coffee$/, exclude: /theme/, tagged: /@lemmata\/expose\/client/}),
 			brotli(),
 
 			coffeescript(),
 			resolve({preferBuiltins: false, extensions: ['.js', '.coffee']}),
 			commonJs(),
-			workerInterface({matches: /_worker.[a-z]+$/}),
+			workerInterface(),
 			stripDecorators(),
 			babel({
 			cwd: __dirname + '/..'
@@ -61,6 +64,8 @@ export client =
 					},
 					toplevel: true,
 			}) else {}
+
+			outputTree()
 	]
 	output:
 		dir: if process.env.ROLLUP_DEPLOY then './deploy/public' else './generated/public',

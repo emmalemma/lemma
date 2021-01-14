@@ -1,10 +1,14 @@
 ### **lemma**
 
- | A lemma is a small, formally proven result which is used in the proof of a more consequential theorem.
+> A lemma is a small, formally proven result which is used in the proof of a more consequential theorem.
 
-Lemma is a full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. The philosophy of Lemma is to do as much as possible, while doing as little as possible.
+Lemma is an experimental full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. Philosophy: do as much as possible, while doing as little as possible.
 
-A simple to-do app in its entirety:
+The core design principle of Lemma is to simplify the syntax of building native DOMElement trees using proxy magic and stateful reevaluation. The costs of that abstraction layer are paid off by enabling conventional JavaScript rules of function composition and closure scope to be fully responsible for state management and interactivity.
+
+Unlike many frameworks which are intended to encourage separation of concerns among large teams, Lemma is explicitly intended to encourage the commingling of concerns. This approach empowers a sole developer to rapidly iterate on a UI concept. Paradoxically, the absence of a large-scale organizing abstraction enables that same developer to easily refactor commingled code as the app grows, leveraging only conventional JavaScript semantics.
+
+A simple, commingled to-do app in its entirety:
 
 ```coffeescript
 import {elements, state} from 'lemma'
@@ -21,7 +25,7 @@ document.body.appendChild div.todoApp ->
     for task in tasks.filter (task)->task.done
       tasks.splice tasks.indexOf(task), 1
 
-	input onkeypress: addTask
+	input onkeypress: keyCode(13) clearTarget() ({target: {value}})-> tasks.push {body: value}
 	button 'clear completed', onclick: clearCompleted
   div.tasks ->
   	for task in tasks
@@ -50,6 +54,211 @@ document.body.appendChild(div.todoApp(_=>{
 	});
 }));
 ```
+
+Prematurely and aggressively refactoring that same code to separate state and presentation logic produces:
+
+```coffeescript
+import {elements, state} from 'lemma'
+import {whenKeyCode, clearTarget} from 'lemma/events'
+{div, span, button, input} = elements
+
+# compositional helpers
+
+removeWhen =(pred)-> (list)->
+  for item in list.filter pred
+    list.splice list.indexOf(item), 1
+
+pushTo = (list)-> (fn)-> (event)->
+  list.push fn event
+
+wrap = (wrapper)-> (fn)-> (event)->
+  wrapper fn event
+
+getValue = -> (fn)-> (event)->
+  fn event
+  event.target.value
+
+whenKeyCode = (code)-> (fn)-> (event)->
+  if event.code is code
+    fn event
+
+clearTarget = -> (fn)-> (event)->
+  fn event
+  event.target.value = ''
+
+# state tree
+
+appState = (fn)-> ->
+  tasks = state []
+  addTask = pushTo(tasks) wrap((x)-> body: x) getValue() ->
+  clearCompleted = removeWhen((task)->task.done) tasks
+
+  fn {addTask, clearCompleted}, listState: (fn)->
+    fn {tasks}, {taskState}
+
+taskState = (fn)-> (task)-> fn
+  isDone: task.done
+  taskBody: task.body
+  toggleTask: -> task.done = !task.done
+
+# presentation tree
+
+renderApp = ({addTask, clearCompleted}, {listState})->
+  div.todoApp ->
+   	input onkeypress: whenKeyCode(13) clearTarget() addTask
+   	button 'clear completed', onclick: clearCompleted
+     div.tasks listState ({tasks}, {taskState})->
+     	for task in tasks
+     		div.$for(task) renderTask(taskState task)
+
+renderTask = ({isDone, taskBody, toggleTask})->
+    input type: 'checkbox', selected: isDone(), onclick: toggleTask
+    span.task taskBody()
+
+document.body.appendChild do appState renderApp
+```
+
+Converting those functional components into library methods, the result might be:
+
+```coffeescript
+import {elements, state} from 'lemma'
+import {whenKeyCode, clearTarget, pushTo, wrap, getValue, removeWhen} from './events'
+import {stateTree} from './state'
+{div, span, button, input} = elements
+
+# state tree
+appState = stateTree (local, child)->
+  tasks = state []
+  local
+    addTask: pushTo(tasks) wrap((x)-> body: x) getValue() ->
+    clearCompleted: removeWhen((task)->task.done) tasks
+  child listState: (local)->
+    local {tasks}
+    child taskState: (local)-> (task)->
+      local
+        isDone: task.done
+        taskBody: task.body
+        toggleTask: -> task.done = !task.done
+
+# presentation tree
+
+renderApp = ->
+  div.todoApp appState ({addTask, clearCompleted}, {listState})->
+   	input onkeypress: whenKeyCode(13) clearTarget() addTask
+   	button 'clear completed', onclick: clearCompleted
+     div.tasks listState ({tasks}, {taskState})->
+     	for task in tasks
+        div.$for(task) renderTask(taskState(task))
+
+renderTask = ({isDone, taskBody, toggleTask})->
+    input type: 'checkbox', selected: isDone(), onclick: toggleTask
+    span.task taskBody()
+
+document.body.appendChild renderApp()
+```
+
+This level of refactoring for such a simple app seems deranged, and of course that's the point: A simple UI like this todo app is much cleaner, and easier to understand, when its concerns are commingled. Since the mechanisms at play are only those of JavaScript, it's an entirely deductive task to understand what refactoring is sensible.
+
+As can be inferred from the code, a basic element function like `div` returns a raw DOMElement, as in e.g. hyperscript. Fields of the property object passed in are assigned directly to that element, and its body function is evaluated recursively in the context of that element as a parent. `e.lements` is a proxy which produces functions with an arbitrary `tagName`, and `div` is a proxy which implicitly applies a `className` to the resulting props.
+
+In other words, simplified definition for `div`:
+
+```coffeescript
+div.parent property: value, ->
+  div.child 'Text Content'
+
+# Behaves as if div is something like:
+
+parentElement = null
+div = new Proxy {},
+  get: (_, className)->
+    (props, bodyFn) ->
+      element = document.createElement 'DIV'
+      element.className = className
+      element[prop] = value for prop, value of props
+      parentElement?.appendChild element
+      parentElement = element
+      bodyFn.call element
+```
+
+Reactivity happens on a per-element basis: element bodies that access a reactive object are automatically reevaluated in-place when the reactive value changes. Elements which already exist (on the basis of the proxy-defined properties `tagName.className(...)`) are reused in order,
+
+In other words, a more accurate simplified definition:
+
+```coffeescript
+text = ref ''
+div.context ->
+  div.output text.value
+  input oninput: ({target: {value}})-> text.value = value
+
+
+# Within the proxy, the body of the element generator looks more like:
+
+... = (props, bodyFn)->
+  element = findOrCreate(parentElement, tagName, className)
+  element[prop] = value for prop, value of props
+  parentElement?.appendChild element
+  watchEffect ->
+    parentElement = element
+    bodyFn.call element
+    removeOldElements(parentElement)
+
+# where `watchEffect`, as in Vue 3, simply reevaluates the provided function when a reactive object it references is mutated
+```
+
+Since by default, reactive mutations are consumed by their closest containing `effect`, only the necessary body functions are reevaluated. This simple(ish) logic replaces the diff/patch mechanism of a virtual DOM:
+
+```coffeescript
+div.deeply ->
+  div.nested ->
+    div.scope ->
+      text = ref ''
+      div.getting ->
+        # only this closure will be reevaluated on an input event
+        div text.value # this is the only element that will be mutated
+      div.setting ->
+        # since the parent closure where text is defined won't be reevaluated, this event handler remains valid
+        input oninput: ({target: {value}})-> text.value = value
+```
+
+There is clearly a decent amount of runtime magic happening to enforce these rules. But the benefit of doing things this way is that's where the magic ends-- the remaining semantics are purely those of JavaScript closure scope and function composition.
+
+Consider what happens when we add a feature to the above:
+
+```coffeescript
+div.deeply ->
+  div.nested ->
+    # this _self-evidently_ won't work: `text` is not defined in this closure scope
+    div.preview text.value
+    div.scope ->
+      text = ref ''
+      div.getting ->
+        div text.value
+      div.setting ->
+        input oninput: ({target: {value}})-> text.value = value
+```
+
+Knowing only the rules of JavaScript, it's obvious that the `text` ref must be lifted:
+
+
+```coffeescript
+div.deeply ->
+  # we need to lift text to here
+  text = ref ''
+  div.nested ->
+    # we access `text` here, so it obviously needs to be in a containing closure scope
+    div.preview text.value
+    div.scope ->
+      # but since this closure doesn't immediately reference `text`, its body can be reused
+      div.getting ->
+        # only this closure is reevaluated
+        div text.value
+      div.setting ->
+        # so this event handler still doesn't need to be redefined on input!
+        input oninput: ({target: {value}})-> text.value = value
+```
+
+So following only conventional coding practices, it's completely natural to localize state to the nearest scope where it will be needed, and to lift state up as necessary when refactoring.
 
 # Incentives
 

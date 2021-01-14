@@ -18,7 +18,11 @@ do ->
 			await loadConfig "file:///#{Deno.cwd()}/#{m[1]}"
 
 	log 'Listening on', Config.port
-	await Api.host()
+	
+	try
+		await Api.host()
+	catch e
+		log.error 'Listen server exited with error:', e
 
 	log 'Listen server exited.'
 	# log 'Closing rollup.'

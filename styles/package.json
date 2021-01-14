@@ -1,0 +1,13 @@
+{
+  "name": "@lemmata/styles",
+  "version": "0.0.1-a1",
+  "description": "css class generator",
+  "main": "index.js",
+  "type": "module",
+  "sideEffects": false,
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@lemmata/client": "^0.0.1"
+  }
+}

@@ -17,7 +17,7 @@ export class DataStore
 		try
 			@index = (await readJson "#{@path}/.index") or {}
 		catch e
-			console.log 'Index read error', e
+			console.log 'Index read error', @path
 		@index[k] ?= {} for k of @indexes
 
 	persistIndex: ->

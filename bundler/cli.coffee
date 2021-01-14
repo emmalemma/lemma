@@ -3,11 +3,13 @@
 import {bundle, watch} from './index.js'
 import {spawn} from 'child_process'
 import {log} from './log.js'
+import {mkdirSync} from 'fs'
 
 serve = (path)->
 	log 'Spawning server process...'
+	mkdirSync './generated', recursive: true
 	spawn 'deno',
-		"""run --allow-run ../../server/generated/server.js""".split(/\s+/)
+		"""run --allow-run ../node_modules/\\@lemmata/server/generated/server.js""".split(/\s+/)
 		stdio: 'inherit inherit inherit'.split(' ')
 		cwd: './generated'
 		killSignal: 'SIGINT'

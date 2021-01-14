@@ -25,10 +25,10 @@ exportType = (node)->
 	# 				return 'reactive'
 	'rpc'
 
-export workerInterface = ({matches})->
+export workerInterface = ->
 	name: 'worker-interface-plugin'
 	transform: (code, id)->
-		unless (code.match /expose\/api/) or code.match /this\.expose\.(API|WORKER)/
+		unless (code.match /expose\/(api|worker)/)
 			return
 		ast = this.parse code, sourceType: 'module'
 		exports = []
@@ -37,7 +37,8 @@ export workerInterface = ({matches})->
 				exports.push exp =
 					name: exportName node
 					type: exportType node
-		target = id.match(/([^\/\\]+)\.[a-z]+$/)[1]
+		[_, parts...] = id.replace(process.cwd(), '').replace(/\.\w+$/, '').split /[\\\/]/
+		target = parts.join '/'
 		exportInterfaces = for exp in exports
 			"""export #{if exp.name is 'default' then 'default ' else "const #{exp.name} = "} workerInterface.#{exp.type}("#{target}", '#{exp.name}');"""
 
@@ -56,18 +57,14 @@ export serverImportMaps = ->
 	options: (opts)->
 		options = opts
 	resolveId: (source, importer)->
-		if source in options.input
+		if source in options.input and not importer
 			return null
-
-		if source.match /^lemma\/deno/
-			id: "../node_modules/#{source}.js"
+		result = if m = source.match /^@lemmata\/server\/(.+)/
+			id: "../../node_modules/@lemmata/server/generated/#{m[1]}.js"
 			external: true
-		else if source.match /^lemma/
-			id: "./node_modules/#{source}.coffee"
-			external: false
-		else if source.match /^\.\//
+		else if m = source.match /^\.\/(.+)/
 			[path..., file] = importer.split /[\\\/]/
-			id: "#{path.join '/'}/#{source}.coffee"
+			id: "#{path.join '/'}/#{m[1]}.coffee"
 			external: false
 		else if source.match /^https:/
 			id: source
@@ -76,34 +73,45 @@ export serverImportMaps = ->
 			id: map[source]
 			external: true
 		else null
+		result
 
 export stripDecorators = ->
 	name: 'strip-decorators-plugin'
 	transform: (code, id)->
-		return unless code.match /this\.expose\.|@lemmata\/expose/
-		# console.log transforming: code[0..100]
+		return unless code.match /@lemmata\/expose/
 		ast = this.parse code, sourceType: 'module'
 		next = false
 		for node in ast.body
 			if node.type is 'ExpressionStatement' and node.expression.property?.name in ['CLIENT', 'API', 'WORKER']
-				# console.log node
 				next = true
 			else if next
 				next = false
-				# console.log 'next', node
 
-		map: {mappings: ''}, code: code.replace /this\.expose\.(API|CLIENT|WORKER)|import '@lemmata\/expose\/\w+'/g, ''
+		map: {mappings: ''}, code: code.replace /import '@lemmata\/expose\/\w+'/g, ''
 
 export autoInput = ({dir, matches, exclude, tagged})->
 	name: 'auto-input-plugin'
 	options: (options)->
 		options.input = []
-		files = await promisify (cb)-> fs.readdir dir, cb
-		for file in files
-			if file.match(matches) and not file.match exclude
-				filePath = "#{dir}/#{file}"
-				file = await promisify (cb)-> fs.readFile filePath, 'utf8', cb
-				if file.match tagged
-					options.input.push filePath
-		console.log 'bundling', options.input
+		scanDir = (dir)->
+			entries = await promisify (cb)-> fs.readdir dir, withFileTypes: true, cb
+			for entry in entries
+				if entry.isDirectory()
+					unless entry.name.match /node_modules|generated/
+						await scanDir "#{dir}/#{entry.name}"
+				else if entry.name.match(matches) and not entry.name.match exclude
+					filePath = "#{dir}/#{entry.name}"
+					file = await promisify (cb)-> fs.readFile filePath, 'utf8', cb
+					if file.match tagged
+						options.input.push filePath
+		await scanDir dir
 		options
+
+export outputTree =->
+	name: 'output-tree-plugin'
+	renderChunk: (code, chunk, options)->
+		return unless chunk.isEntry
+		relativePath = chunk.facadeModuleId.replace process.cwd(), ''
+		[_, dirs..., path] = relativePath.split /[\/\\]/
+		chunk.fileName = [dirs..., chunk.fileName.replace(/[\d+]\.js/, '.js')].join '__slash__'
+		null

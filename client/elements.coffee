@@ -14,22 +14,32 @@ checkRenders = (target)->
 	if target.needsRerender
 		do target.effect
 		target.needsRerender = target.childNeedsRerender = false
+		# delete target.dataset.needsRerender
+		# delete target.dataset.childNeedsRerender
 
 	else if target.childNeedsRerender
 		checkRenders child for child in target.children
 		target.childNeedsRerender = false
+		# delete target.dataset.childNeedsRerender
+
 
 
 schedulef = (effect)->
 	effect.element.needsRerender = true
+	# effect.element.dataset.needsRerender = true
+	# effect.element.dataset.rootElement = effect.rootElement.tagName
 	parentEffect = effect
 	while (parentEffect = parentEffect.parent) and not (parentEffect.element.childNeedsRerender or parentEffect.element.needsRerender)
 		parentEffect.element.childNeedsRerender = true
+		# parentEffect.element.dataset.childNeedsRerender = true
+
 
 	unless effect.rootElement.renderScheduled
 		effect.rootElement.renderScheduled = true
+		# effect.rootElement.dataset.renderScheduled = true
 		await delay 0
 		effect.rootElement.renderScheduled = false
+		# effect.rootElement.dataset.renderScheduled = false
 		checkRenders effect.rootElement
 
 effectCatcher = (element, effectFn)->
@@ -199,3 +209,20 @@ export cleanup =(cb)->
 
 export rerender =(element)->
 	schedulef element.effect if element.effect
+
+export layout = (element)->
+	document.body.appendChild element
+
+export assumeRoot = (element, bodyFn)->
+	rootElement = element
+	makeEffect element, bodyFn
+
+export registerComponent = (name, fn)->
+	className = name.replace(/(:?^|-)(\w)/g, (m,c,s)->s.toUpperCase())+'Component'
+	box = [className]: class extends HTMLElement
+		constructor: ->
+			super()
+			do =>
+				await delay 0
+				assumeRoot this, fn
+	customElements.define name, box[className]

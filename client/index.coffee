@@ -6,7 +6,6 @@ export * from './database'
 export * from './events'
 export * from './persistence'
 export * from './remoting'
-export * from './themed'
 export * from './util'
 #
 export * from './markdown'

@@ -1,3 +1,5 @@
+# import "@lemmata/expose/middleware"
+
 import {jwt, uuid} from './deps.js'
 import {DataStore} from './datastore.js'
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.2.4/mod.ts";

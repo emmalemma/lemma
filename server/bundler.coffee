@@ -8,11 +8,12 @@ export runRollup = ()->
 
 export serveBundles = ({path})->
 	Api.staticStack.push (context, next) ->
-		jspath = if context.request.url.pathname is '/'
-			'/index.js'
+		jsfile = if context.request.url.pathname is '/'
+			'index.js'
 		else
-			context.request.url.pathname + '.js'
-		if await Deno.stat(path + jspath).then((x)->true).catch(->false)
-			console.log 'serving module', path + jspath
-			context.response.html = """<script src='#{jspath}' type='module'></script>"""
+			[_, parts...] = context.request.url.pathname.split '/'
+			parts.join('__slash__') + '.js'
+		console.log 'serving jsfile', jsfile, "#{path}/#{jsfile}"
+		if await Deno.stat("#{path}/#{jsfile}").then((x)->true).catch(->false)
+			context.response.html = """<script src='/#{jsfile}' type='module'></script>"""
 		else next()
