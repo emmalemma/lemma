@@ -5,6 +5,7 @@ import resolve from '@rollup/plugin-node-resolve'
 import {babel} from '@rollup/plugin-babel'
 import json from '@rollup/plugin-json'
 import polyfills from 'rollup-plugin-node-polyfills'
+import webWorkers from 'rollup-plugin-web-worker-loader'
 import analyzer from 'rollup-plugin-analyzer'
 # // import html from '@rollup/plugin-html'
 import brotli from 'rollup-plugin-brotli'
@@ -55,6 +56,7 @@ export client =
 			}),
 			json(),
 			polyfills(),
+			webWorkers(target: 'browser', skipPlugins: ['auto-input-plugin']),
 			injectProcessEnv({env: {}}),
 			if process.env.ROLLUP_DEPLOY then terser({
 					ecma: 6,

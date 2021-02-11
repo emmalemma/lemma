@@ -23,7 +23,7 @@ export watch = ->
 					result.close()
 				when 'ERROR'
 					log.error "Error building #{name}:"
-					log.error error
+					log.error error.stack
 		process.on 'SIGINT', ->
 			log '[SIGINT] closing watcher for', name
 			watcher.close()
