@@ -1,14 +1,27 @@
-### **lemma**
+## **lemma**
 
 > A lemma is a small, formally proven result which is used in the proof of a more consequential theorem.
 
-Lemma is an experimental full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. Philosophy: do as much as possible, while doing as little as possible.
+Lemma is an experimental full-stack JS library built on top of Deno, CoffeeScript and Rollup.js. The goal: do as much as possible, while doing as little as possible.
 
-The core design principle of Lemma is to simplify the syntax of building native DOMElement trees using proxy magic and stateful reevaluation. The costs of that abstraction layer are paid off by enabling conventional JavaScript rules of function composition and closure scope to be fully responsible for state management and interactivity.
+### Components
 
-Unlike many frameworks which are intended to encourage separation of concerns among large teams, Lemma is explicitly intended to encourage the commingling of concerns. This approach empowers a sole developer to rapidly iterate on a UI concept. Paradoxically, the absence of a large-scale organizing abstraction enables that same developer to easily refactor commingled code as the app grows, leveraging only conventional JavaScript semantics.
+#### client
+A simple declarative syntax for building a tree of native DOMElements, each with a native closure context. A minimal runtime updates elements in-place using Vue's proxy-based reactive objects.
 
-A simple, commingled to-do app in its entirety:
+#### server
+A Deno development server based on Oak which serves client code as pages according to the codebase directory structure, similar to Next.js. It supports the RPC interface that lets client and server code communicate transparently.
+
+#### bundler
+A build-time wrapper around rollup.js and a set of plugins which partition the codebase into client and server-side on a per-file basis. Server-side exports are converted into RPC methods on the client side.
+
+## Philosophy
+
+Unlike many frameworks which are intended to encourage separation of concerns among large teams, Lemma is explicitly intended to encourage the commingling of concerns. This approach empowers a sole developer to rapidly iterate on a UI concept. Paradoxically, the absence of a large-scale organizing abstraction enables one to easily refactor code as the app grows, leveraging mostly conventional JavaScript semantics.
+
+## Demo
+
+A simple to-do app in its entirety:
 
 ```coffeescript
 import {elements, state} from 'lemma'
@@ -55,111 +68,48 @@ document.body.appendChild(div.todoApp(_=>{
 }));
 ```
 
-Prematurely and aggressively refactoring that same code to separate state and presentation logic produces:
+#### Incentives
 
-```coffeescript
-import {elements, state} from 'lemma'
-import {whenKeyCode, clearTarget} from 'lemma/events'
-{div, span, button, input} = elements
+- Very low boilerplate (sensible defaults for small apps)
+- Full-stack simplicity (seamless client-server interaction)
+- Flexibility in iterative development (state lifting, refactoring components)
+- Single technology (it's all just JavaScript)
 
-# compositional helpers
+#### Features
 
-removeWhen =(pred)-> (list)->
-  for item in list.filter pred
-    list.splice list.indexOf(item), 1
+- Declarative, compositional syntax
+- Native JavaScript closure scopes for both state and view code
+- Automatic RPC generation between client and server code
 
-pushTo = (list)-> (fn)-> (event)->
-  list.push fn event
+#### What makes Lemma different?
 
-wrap = (wrapper)-> (fn)-> (event)->
-  wrapper fn event
+Lemma selectively combines many features that are common among front-end frameworks, with a specific focus on balancing build-time and run-time simplicity.
 
-getValue = -> (fn)-> (event)->
-  fn event
-  event.target.value
+Unlike Angular and Ember.js, Lemma uses pure-JS render functions rather than HTML templates or inline attributes.
 
-whenKeyCode = (code)-> (fn)-> (event)->
-  if event.code is code
-    fn event
+Unlike React and Vue.js, Lemma creates raw DOMElement nodes which are returned directly to the caller, and updates them in-place with a minimal runtime rather than via a virtual DOM. Event handlers are assigned in-place with the closure scope where they are defined.
 
-clearTarget = -> (fn)-> (event)->
-  fn event
-  event.target.value = ''
+Unlike Svelte and Imba, Lemma does not use a build-time compilation step (apart from the recommended CoffeeScript compiler) to produce front-end code-- however, automatic RPC generation does require bundling.
 
-# state tree
+Unlike raw JavaScript, Lemma provides a simple declarative syntax, reactive updating of components, and a principled approach to state flow through the app.
 
-appState = (fn)-> ->
-  tasks = state []
-  addTask = pushTo(tasks) wrap((x)-> body: x) getValue() ->
-  clearCompleted = removeWhen((task)->task.done) tasks
+Uniquely, Lemma uses CoffeeScript by default as an expressive syntax for view code. There is no special "component" abstraction; every element has its own closure scope which is used for state management and runtime behavior.
 
-  fn {addTask, clearCompleted}, listState: (fn)->
-    fn {tasks}, {taskState}
+Lemma works as a full-stack system, which partitions client- and server-side code across a transparent RPC interface to a Deno-based API server.
 
-taskState = (fn)-> (task)-> fn
-  isDone: task.done
-  taskBody: task.body
-  toggleTask: -> task.done = !task.done
+#### Why should you use Lemma?
 
-# presentation tree
+I really don't think you should! You should continue to use whatever technology your working production system is already built on, and focus on approaches with which your team is already familiar.
 
-renderApp = ({addTask, clearCompleted}, {listState})->
-  div.todoApp ->
-   	input onkeypress: whenKeyCode(13) clearTarget() addTask
-   	button 'clear completed', onclick: clearCompleted
-     div.tasks listState ({tasks}, {taskState})->
-     	for task in tasks
-     		div.$for(task) renderTask(taskState task)
+If you're building a web app from scratch in 2021, I recommend React.js as a default. If a minimal, compositional style is attractive, consider testing Vue 3 with the Composition API. Where bundle size and raw performance are priorities, try Svelte, or if you are up for something more dramatic, take a look at Imba.
 
-renderTask = ({isDone, taskBody, toggleTask})->
-    input type: 'checkbox', selected: isDone(), onclick: toggleTask
-    span.task taskBody()
+Lemma is an experiment. It's not at all ready for production applications, and it may never be. There is little test coverage, the APIs are not stable, and many of the core abstractions can be at best called "esoteric".
 
-document.body.appendChild do appState renderApp
-```
+With that said, if you're interested in the kind of web development which is possible when abstractions built on pure JS are pushed to the breaking point, poke around. You might just find something here that entertains.
 
-Converting those functional components into library methods, the result might be:
+## Client overview
 
-```coffeescript
-import {elements, state} from 'lemma'
-import {whenKeyCode, clearTarget, pushTo, wrap, getValue, removeWhen} from './events'
-import {stateTree} from './state'
-{div, span, button, input} = elements
-
-# state tree
-appState = stateTree (local, child)->
-  tasks = state []
-  local
-    addTask: pushTo(tasks) wrap((x)-> body: x) getValue() ->
-    clearCompleted: removeWhen((task)->task.done) tasks
-  child listState: (local)->
-    local {tasks}
-    child taskState: (local)-> (task)->
-      local
-        isDone: task.done
-        taskBody: task.body
-        toggleTask: -> task.done = !task.done
-
-# presentation tree
-
-renderApp = ->
-  div.todoApp appState ({addTask, clearCompleted}, {listState})->
-   	input onkeypress: whenKeyCode(13) clearTarget() addTask
-   	button 'clear completed', onclick: clearCompleted
-     div.tasks listState ({tasks}, {taskState})->
-     	for task in tasks
-        div.$for(task) renderTask(taskState(task))
-
-renderTask = ({isDone, taskBody, toggleTask})->
-    input type: 'checkbox', selected: isDone(), onclick: toggleTask
-    span.task taskBody()
-
-document.body.appendChild renderApp()
-```
-
-This level of refactoring for such a simple app seems deranged, and of course that's the point: A simple UI like this todo app is much cleaner, and easier to understand, when its concerns are commingled. Since the mechanisms at play are only those of JavaScript, it's an entirely deductive task to understand what refactoring is sensible.
-
-As can be inferred from the code, a basic element function like `div` returns a raw DOMElement, as in e.g. hyperscript. Fields of the property object passed in are assigned directly to that element, and its body function is evaluated recursively in the context of that element as a parent. `e.lements` is a proxy which produces functions with an arbitrary `tagName`, and `div` is a proxy which implicitly applies a `className` to the resulting props.
+As can be inferred from the code above, a basic element function like `div` returns a raw DOMElement, as in e.g. hyperscript. Fields of the property object passed in are assigned directly to that element, and its body function is evaluated recursively in the context of that element as a parent. `e.lements` is a proxy which produces functions with an arbitrary `tagName`, and `div` is a proxy which implicitly applies a `className` to the resulting props.
 
 In other words, simplified definition for `div`:
 
@@ -260,41 +210,10 @@ div.deeply ->
 
 So following only conventional coding practices, it's completely natural to localize state to the nearest scope where it will be needed, and to lift state up as necessary when refactoring.
 
-# Incentives
+## Server overview
 
-- Very low boilerplate (sensible defaults for small apps)
-- Full-stack simplicity (seamless client-server interaction)
-- Flexibility in iterative development (state lifting, refactoring components)
-- Single technology (it's all just JavaScript)
+...
 
-# Features
+## Bundler
 
-- Declarative, compositional syntax
-- Native JavaScript closure scopes for both state and view code
-- Automatic RPC generation between client and server code
-
-# What makes Lemma different?
-
-Lemma selectively combines many features that are common among front-end frameworks, with a specific focus on balancing build-time and run-time simplicity.
-
-Unlike Angular and Ember.js, Lemma uses pure-JS render functions rather than HTML templates or inline attributes.
-
-Unlike React and Vue.js, Lemma creates raw DOMElement nodes which are returned directly to the caller, and updates them in-place with a minimal runtime rather than via a virtual DOM. Event handlers are assigned in-place with the closure scope where they are defined.
-
-Unlike Svelte and Imba, Lemma does not use a build-time compilation step apart from the CoffeeScript compiler to produce front-end code-- however, automatic RPC generation does require bundling.
-
-Unlike raw JavaScript, Lemma provides a simple declarative syntax, reactive updating of components, and a principled approach to state flow through the app.
-
-Uniquely, Lemma uses CoffeeScript by default as an expressive syntax for view code. There is no special "component" abstraction; every element has its own closure scope which is used for state management and runtime behavior.
-
-Lemma ships as a full-stack system, which partitions client- and server-side code across a transparent RPC interface to a Deno-based API server.
-
-# Why should you use Lemma?
-
-I really don't think you should! You should continue to use whatever technology your working production system is already built on, and focus on approaches with which your team is already familiar.
-
-If you're building a web app from scratch in 2021, I recommend React.js as a default. If a minimal, compositional style is attractive, consider testing Vue 3 with the Composition API. Where bundle size and raw performance are priorities, try Svelte, or if you are up for something more dramatic, take a look at Imba.
-
-Lemma is an experiment. It's not at all ready for production applications, and it may never be. There is little test coverage, the APIs are not stable, and many of the core abstractions can be at best called "esoteric".
-
-With that said, if you're interested in the kind of web development which is possible when abstractions built on pure JS are pushed to the breaking point, poke around. You might just find something here that entertains.
+...
