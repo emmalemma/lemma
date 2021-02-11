@@ -7,12 +7,17 @@ import Config from './config.js'
 import {log} from './log.js'
 
 AllowedHostnames = (context, next)->
-	unless context.request.url.hostname in Config.allowedHosts
-		context.respond = false
-		log 'Ignoring request to ', context.request.url.hostname
-		context.request.serverRequest.conn.close()
-	else
-		await next()
+	try
+		unless context.request.url.hostname in Config.allowedHosts
+			context.respond = false
+			log 'Ignoring request to ', context.request.url.hostname
+			context.request.serverRequest.conn.close()
+		else
+			await next()
+	catch e
+		log.error 'AllowedHostnames cannot process request'
+		log.error e
+		context.throw 500
 
 JsonResponse = (context, next)->
 	await next()
@@ -55,7 +60,7 @@ abortController = null
 export Abort =-> abortController.abort()
 
 export Api =
-	app: new Oak.Application
+	app: new Oak.Application proxy: true
 	router: new Oak.Router
 	staticStack: []
 	serve: (path)->
@@ -97,9 +102,13 @@ export Api =
 		abortController = new AbortController
 
 		@app.addEventListener 'error', (event)->
+			log.error "!!!!! UNCAUGHT ERROR"
 			log.error "#{new Date()} Oak uncaught #{event.error.name}"
 			log.error event.error.stack
-			abortController.abort()
+			# abortController.abort()
+
+		# @app.proxy = Config.proxy or false
+		log 'is app proxied?', @app.proxy
 
 		certs =
 			if Config.tls

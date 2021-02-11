@@ -1,4 +1,4 @@
-import {Application, Router, send} from "https://deno.land/x/oak@v6.4.1/mod.ts"
+import {Application, Router, send} from "https://deno.land/x/oak@v6.4.2/mod.ts"
 Oak = {Application, Router, send}
 
 import * as fs from "https://deno.land/std@0.80.0/fs/mod.ts"

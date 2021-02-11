@@ -28,7 +28,7 @@ export assignId = (context, id)->
 		expires: new Date payload.exp * 1000
 		httpOnly: true
 		overwrite: true
-		secure: true
+		# secure: true
 		sameSite: 'strict'
 
 export destroyId = (context)->

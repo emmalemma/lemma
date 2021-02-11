@@ -1,5 +1,5 @@
 export default Config =
-	port: 9010
+	port: 443
 	jwt:
 		keys: ['insecure secret']
 		algorithm: 'HS512'

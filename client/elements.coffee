@@ -173,9 +173,9 @@ _elements =  (keyProps, args...)->
 		if insertElement
 			if insertElement is element
 				insertElement = element.nextElementSibling
-			else
+			else unless insertElement.previousElementSibling is element
 				parentElement.insertBefore element, insertElement
-		else
+		else unless parentElement.lastElementChild is element
 			parentElement.appendChild element
 	else
 		rootElement = element

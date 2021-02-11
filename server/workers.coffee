@@ -79,12 +79,13 @@ hostApi = (target)->
 		try
 			if context.params.exportName.match /^_/
 				throw new Error 'invalid export'
-
-			result = await modules[target][context.params.exportName].apply(context, await request.body().value)
+			unless fn = modules[target][context.params.exportName]
+				throw new Error "no definition for #{target}.#{context.params.exportName}"
+			result = await fn.apply(context, await request.body().value)
 			if result instanceof SocketProxy
 				hostSocket target, context.params.exportName
 
-				response.json = socket: request.url.href.replace(/https/, 'wss')
+				response.json = socket: request.url.href.replace(/^https?/, 'wss')
 			else
 				response.json = raw: result
 
@@ -161,9 +162,8 @@ loadWorker = (target, uri)->
 loadModule = (target, uri)->
 	previous = modules[target]
 	try
-		module = await import("#{uri}?#{Date.now()}")
+		module = await import(path = "#{uri}?#{Date.now()}")
 		modules[target] = module
-		log 'loaded module', target
 		module._upgrade? previous if previous
 	catch e
 		log.error 'hot reload failed on', target
@@ -177,6 +177,7 @@ watchTarget = (target, path, reload)->
 	for await event from Deno.watchFs path
 		if event.kind is 'modify'
 			debounce ?= do ->
+				await delay 100
 				await reload target, uri
 				await delay 100
 				debounce = null
